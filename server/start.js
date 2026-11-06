@@ -1,23 +1,31 @@
 import http from 'node:http';
 
-const port = Number(process.env.PORT || 8787);
+const port = process.env.PORT || 3000;
+console.log(`Calzado Evalook arranque node=${process.version} PORT=${process.env.PORT || '(no definido)'}`);
 
-function explain(error) {
+let onRequest = (_req, res) => {
+  res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+  res.end('<!doctype html><meta charset="utf-8"><title>Calzado Evalook</title><p>Iniciando inventario…</p>');
+};
+
+const server = http.createServer((req, res) => onRequest(req, res));
+server.on('error', (error) => {
   console.error(error);
-  const server = http.createServer((_req, res) => {
-    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-    res.end(`<!doctype html><meta charset="utf-8"><title>Calzado Evalook</title>
-      <body style="font-family:sans-serif;background:#f3ece3;color:#1c1612;padding:48px">
-      <h1>Falta ajustar Node</h1>
-      <p>Este inventario necesita Node.js 24. En Hostinger pulsa Redistribuir, cambia la versión del nodo a <strong>24.x</strong> y confirma.</p>
-      </body>`);
-  });
-  server.listen(port);
-}
+  process.exit(1);
+});
+server.listen(port, '0.0.0.0', () => {
+  console.log(`Calzado Evalook escuchando en el puerto ${port}`);
+});
 
 try {
-  await import('node:sqlite');
-  await import('./index.js');
+  const loaded = await import('./index.js');
+  onRequest = loaded.app;
+  console.log('Calzado Evalook listo');
 } catch (error) {
-  explain(error);
+  console.error(error);
+  const text = String(error?.stack || error);
+  onRequest = (_req, res) => {
+    res.writeHead(500, { 'content-type': 'text/plain; charset=utf-8' });
+    res.end(text);
+  };
 }
