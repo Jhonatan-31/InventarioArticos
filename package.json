@@ -1,0 +1,35 @@
+{
+  "name": "calzado-evalook",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "concurrently \"node --experimental-sqlite --watch-path=server server/index.js\" \"vite --host\"",
+    "server": "node --experimental-sqlite server/index.js",
+    "check": "node --experimental-sqlite server/selfcheck.js",
+    "build": "vite build",
+    "start": "node server/start.js"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "^4.4.1",
+    "cors": "^2.8.5",
+    "exceljs": "^4.4.0",
+    "express": "^4.21.2",
+    "html5-qrcode": "^2.3.8",
+    "jsbarcode": "^3.11.6",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.6.2",
+    "vite": "^6.3.5"
+  },
+  "devDependencies": {
+    "@types/jsbarcode": "^3.11.4",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "concurrently": "^9.1.2",
+    "typescript": "^5.8.3"
+  }
+}
