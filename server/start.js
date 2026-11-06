@@ -1,23 +1,22 @@
-import { spawn } from 'node:child_process';
+import cluster from 'node:cluster';
 import { fileURLToPath } from 'node:url';
 
 const index = fileURLToPath(new URL('./index.js', import.meta.url));
-const child = spawn(process.execPath, ['--experimental-sqlite', index], {
-  stdio: 'inherit',
-  env: process.env,
-});
 
-function stop(signal) {
-  if (!child.killed) child.kill(signal);
+if (cluster.isPrimary) {
+  cluster.setupPrimary({
+    exec: index,
+    execArgv: ['--experimental-sqlite'],
+  });
+  const worker = cluster.fork();
+  const stop = () => worker.kill('SIGTERM');
+  process.on('SIGTERM', stop);
+  process.on('SIGINT', stop);
+  cluster.on('exit', (_worker, code, signal) => {
+    if (signal) {
+      process.kill(process.pid, signal);
+      return;
+    }
+    process.exit(code ?? 1);
+  });
 }
-
-process.on('SIGTERM', () => stop('SIGTERM'));
-process.on('SIGINT', () => stop('SIGINT'));
-
-child.on('exit', (code, signal) => {
-  if (signal) {
-    process.kill(process.pid, signal);
-    return;
-  }
-  process.exit(code ?? 1);
-});
