@@ -166,8 +166,8 @@ app.use((error, _req, res, _next) => {
   });
 });
 
-const server = app.listen(port, '0.0.0.0', () => {
-  console.log(`Calzado Evalook API en http://localhost:${port}`);
+const server = app.listen(port, () => {
+  console.log(`Calzado Evalook escuchando en el puerto ${port}`);
   console.log(`Base de datos local: ${dbFilePath()}`);
 });
 

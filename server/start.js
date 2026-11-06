@@ -12,7 +12,7 @@ function explain(error) {
       <p>Este inventario necesita Node.js 24. En Hostinger pulsa Redistribuir, cambia la versión del nodo a <strong>24.x</strong> y confirma.</p>
       </body>`);
   });
-  server.listen(port, '0.0.0.0');
+  server.listen(port);
 }
 
 try {
