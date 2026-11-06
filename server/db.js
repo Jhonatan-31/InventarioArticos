@@ -5,13 +5,31 @@ import { DatabaseSync } from 'node:sqlite';
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 
+function writableDir(dir) {
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    const probe = path.join(dir, '.probe');
+    fs.writeFileSync(probe, '1');
+    fs.unlinkSync(probe);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+let cachedDataDir = null;
+
 export function dataDir() {
-  if (process.env.EVALOOK_DATA) return path.resolve(process.env.EVALOOK_DATA);
+  if (cachedDataDir) return cachedDataDir;
+  const candidates = [];
+  if (process.env.EVALOOK_DATA) candidates.push(path.resolve(process.env.EVALOOK_DATA));
   const cwd = process.cwd();
   const marker = `${path.sep}hbuilds${path.sep}`;
   const at = cwd.indexOf(marker);
-  if (at !== -1) return path.join(cwd.slice(0, at), 'evalook-data');
-  return path.join(root, 'data');
+  if (at !== -1) candidates.push(path.join(cwd.slice(0, at), 'evalook-data'));
+  candidates.push(path.join(root, 'data'));
+  cachedDataDir = candidates.find((dir) => writableDir(dir)) || path.join(root, 'data');
+  return cachedDataDir;
 }
 
 export function imagesDir() {
