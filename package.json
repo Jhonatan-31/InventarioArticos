@@ -11,6 +11,7 @@
     "server": "node --experimental-sqlite server/index.js",
     "check": "node --experimental-sqlite server/selfcheck.js",
     "build": "vite build",
+    "postinstall": "vite build",
     "start": "node server/start.js"
   },
   "dependencies": {
