@@ -4,12 +4,12 @@
   "version": "1.0.0",
   "type": "module",
   "engines": {
-    "node": ">=22"
+    "node": "24.x"
   },
   "scripts": {
-    "dev": "concurrently \"node --experimental-sqlite --watch-path=server server/index.js\" \"vite --host\"",
-    "server": "node --experimental-sqlite server/index.js",
-    "check": "node --experimental-sqlite server/selfcheck.js",
+    "dev": "concurrently \"node --watch-path=server server/index.js\" \"vite --host\"",
+    "server": "node server/index.js",
+    "check": "node server/selfcheck.js",
     "build": "vite build",
     "postinstall": "vite build",
     "start": "node server/start.js"

@@ -9,7 +9,7 @@ function explain(error) {
     res.end(`<!doctype html><meta charset="utf-8"><title>Calzado Evalook</title>
       <body style="font-family:sans-serif;background:#f3ece3;color:#1c1612;padding:48px">
       <h1>Falta ajustar Node</h1>
-      <p>En Hostinger cambia la versión del nodo a <strong>24.x</strong>, deja el archivo de entrada en <strong>server/start.js</strong> y pulsa Redistribuir.</p>
+      <p>Este inventario necesita Node.js 24. En Hostinger pulsa Redistribuir, cambia la versión del nodo a <strong>24.x</strong> y confirma.</p>
       </body>`);
   });
   server.listen(port, '0.0.0.0');
