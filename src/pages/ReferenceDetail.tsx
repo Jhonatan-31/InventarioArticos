@@ -110,7 +110,7 @@ export function ReferenceDetail() {
         eyebrow="Referencia"
         title={reference ? reference.code : 'Cargando…'}
         text={reference
-          ? `${reference.name} · ${reference.color}. Filtra por fecha de ingreso, talla o cambia de referencia. En bodega solo aparecen los pares que siguen dentro.`
+          ? `${reference.name} · ${reference.color}`
           : 'Cargando la referencia y sus códigos.'}
         actions={
           reference && (
@@ -218,10 +218,13 @@ export function ReferenceDetail() {
             }}
           />
         </label>
-        <div className="filter-actions">
-          <button type="button" className="btn small ghost" onClick={clearFilters}>Limpiar</button>
-          <Link className="btn small ghost" to="/referencias">Volver</Link>
-        </div>
+        <label className="filter-field">
+          <span>Acciones</span>
+          <div className="filter-actions">
+            <button type="button" className="btn ghost" onClick={clearFilters}>Limpiar</button>
+            <Link className="btn ghost" to="/referencias">Volver</Link>
+          </div>
+        </label>
       </div>
 
       {error && <p className="form-error">{error}</p>}

@@ -140,23 +140,26 @@ export function Inventory() {
           <span>Ingreso hasta</span>
           <input type="date" value={toDate} onChange={(event) => { setToDate(event.target.value); setPage(1); }} />
         </label>
-        <div className="filter-actions">
-          <button
-            type="button"
-            className="btn small ghost"
-            onClick={() => {
-              setStatus('existencia');
-              setReferenceId('');
-              setSize('');
-              setFromDate('');
-              setToDate('');
-              setSearch('');
-              setPage(1);
-            }}
-          >
-            Limpiar
-          </button>
-        </div>
+        <label className="filter-field">
+          <span>Acciones</span>
+          <div className="filter-actions single">
+            <button
+              type="button"
+              className="btn ghost"
+              onClick={() => {
+                setStatus('existencia');
+                setReferenceId('');
+                setSize('');
+                setFromDate('');
+                setToDate('');
+                setSearch('');
+                setPage(1);
+              }}
+            >
+              Limpiar
+            </button>
+          </div>
+        </label>
       </div>
       {error && <p className="form-error">{error}</p>}
       <div className="table-wrap">
