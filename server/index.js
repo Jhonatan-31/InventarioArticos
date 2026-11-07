@@ -176,7 +176,7 @@ const launchedDirectly = process.argv[1]
 
 if (launchedDirectly) {
   const port = process.env.PORT || 8787;
-  const server = app.listen(port, '0.0.0.0', () => {
+  const server = app.listen(port, () => {
     console.log(`Calzado Evalook escuchando en el puerto ${port}`);
     console.log(`Base de datos local: ${dbFilePath()}`);
   });

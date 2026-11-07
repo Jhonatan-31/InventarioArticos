@@ -1,1 +1,1 @@
-import './server/start.js';
+import './server/boot.js';
