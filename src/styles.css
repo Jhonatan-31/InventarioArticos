@@ -216,9 +216,43 @@ a { color: var(--cognac-deep); }
 .data tr.priority td { background: #fbf3f1; }
 .data tr.priority td:first-child { box-shadow: inset 3px 0 0 var(--ox); }
 .actions { display: flex; gap: 6px; flex-wrap: wrap; }
-.filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; width: 100%; }
+.filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; width: 100%; }
 .filters .search { width: min(320px, 100%); max-width: 100%; flex: 1 1 180px; }
 .filters select { width: auto; flex: 1 1 140px; min-width: 0; }
+.filter-bar {
+  padding: 14px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+}
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  flex: 1 1 150px;
+}
+.filter-field.grow { flex: 2 1 220px; }
+.filter-field span {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.2;
+}
+.filter-field input,
+.filter-field select,
+.filter-field .search {
+  width: 100%;
+  min-height: 44px;
+}
+.filter-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  flex: 0 0 auto;
+  padding-bottom: 2px;
+}
 .search, .field input, .field select, .field textarea, .filters select {
   border: 1px solid #ddcfc0; background: #fffdfb; border-radius: 10px; padding: 12px;
   min-height: 44px;
@@ -516,7 +550,9 @@ table.bodega tfoot td { position: sticky; bottom: 0; background: #f6efe6; font-w
   .bar-row { grid-template-columns: 1fr; }
   .actions { white-space: normal; }
   .filters .search,
-  .filters select { flex: 1 1 100%; max-width: 100%; width: 100%; }
+  .filters select,
+  .filter-field { flex: 1 1 100%; max-width: 100%; width: 100%; }
+  .filter-actions { width: 100%; }
   .bodega-wrap { max-height: calc(100dvh - 220px); }
   .print-root { grid-template-columns: 1fr; max-height: 55vh; }
   .mode-switch { grid-template-columns: 1fr; }

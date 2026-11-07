@@ -1,23 +1,36 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { getPairs, getReference } from '../api';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { getPairs, getReference, getReferences } from '../api';
 import type { Pair, Reference } from '../types';
-import { formatMoney, formatWhen } from '../format';
+import { SHOE_SIZES, formatMoney, formatWhen } from '../format';
 import { useUi } from '../ui';
 import { PageHeader } from '../components/PageHeader';
 import { LabelPill, StatusPill } from '../components/StatusPill';
 
 export function ReferenceDetail() {
   const { id = '' } = useParams();
+  const navigate = useNavigate();
   const { version, openDamage, openPrint } = useUi();
   const [reference, setReference] = useState<Reference | null>(null);
+  const [refs, setRefs] = useState<Reference[]>([]);
   const [items, setItems] = useState<Pair[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [view, setView] = useState<'existencia' | 'salida' | 'todos'>('existencia');
+  const [size, setSize] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [selected, setSelected] = useState<string[]>([]);
   const [error, setError] = useState('');
   const pageSize = 50;
+
+  useEffect(() => {
+    let cancel = false;
+    getReferences()
+      .then((rows) => { if (!cancel) setRefs(rows); })
+      .catch(() => {});
+    return () => { cancel = true; };
+  }, [version]);
 
   useEffect(() => {
     let cancel = false;
@@ -34,20 +47,25 @@ export function ReferenceDetail() {
     let cancel = false;
     if (!id) return undefined;
     setSelected([]);
-    getPairs({
+    const query: Record<string, string> = {
       referenceId: id,
       status: view,
       page: String(page),
       pageSize: String(pageSize),
-    }).then((result) => {
+    };
+    if (size) query.size = size;
+    if (fromDate) query.from = fromDate;
+    if (toDate) query.to = toDate;
+    getPairs(query).then((result) => {
       if (cancel) return;
       setItems(result.items);
       setTotal(result.total);
+      setError('');
     }).catch((caught: unknown) => {
       if (!cancel) setError(caught instanceof Error ? caught.message : 'No se pudieron cargar los códigos.');
     });
     return () => { cancel = true; };
-  }, [id, version, view, page]);
+  }, [id, version, view, size, fromDate, toDate, page]);
 
   const pages = Math.max(1, Math.ceil(total / pageSize));
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -68,6 +86,14 @@ export function ReferenceDetail() {
     });
   }
 
+  function clearFilters() {
+    setView('existencia');
+    setSize('');
+    setFromDate('');
+    setToDate('');
+    setPage(1);
+  }
+
   if (error && !reference) {
     return (
       <div className="stack page">
@@ -84,7 +110,7 @@ export function ReferenceDetail() {
         eyebrow="Referencia"
         title={reference ? reference.code : 'Cargando…'}
         text={reference
-          ? `${reference.name} · ${reference.color}. Cada par tiene un código único. Los que salen de bodega dejan de aparecer en “En bodega”. Los nuevos ingresos nunca reutilizan códigos.`
+          ? `${reference.name} · ${reference.color}. Filtra por fecha de ingreso, talla o cambia de referencia. En bodega solo aparecen los pares que siguen dentro.`
           : 'Cargando la referencia y sus códigos.'}
         actions={
           reference && (
@@ -128,19 +154,74 @@ export function ReferenceDetail() {
         </section>
       )}
 
-      <div className="filters">
-        <select
-          value={view}
-          onChange={(event) => {
-            setView(event.target.value as 'existencia' | 'salida' | 'todos');
-            setPage(1);
-          }}
-        >
-          <option value="existencia">En bodega</option>
-          <option value="salida">Ya salieron</option>
-          <option value="todos">Todos los códigos</option>
-        </select>
-        <Link className="btn small ghost" to="/referencias">Volver</Link>
+      <div className="filters filter-bar">
+        <label className="filter-field">
+          <span>Referencia</span>
+          <select
+            value={id}
+            onChange={(event) => {
+              navigate(`/referencias/${event.target.value}`);
+              setPage(1);
+            }}
+          >
+            {refs.map((item) => (
+              <option key={item.id} value={item.id}>{item.code} · {item.name}</option>
+            ))}
+          </select>
+        </label>
+        <label className="filter-field">
+          <span>Estado</span>
+          <select
+            value={view}
+            onChange={(event) => {
+              setView(event.target.value as 'existencia' | 'salida' | 'todos');
+              setPage(1);
+            }}
+          >
+            <option value="existencia">En bodega</option>
+            <option value="salida">Ya salieron</option>
+            <option value="todos">Todos los códigos</option>
+          </select>
+        </label>
+        <label className="filter-field">
+          <span>Talla</span>
+          <select
+            value={size}
+            onChange={(event) => {
+              setSize(event.target.value);
+              setPage(1);
+            }}
+          >
+            <option value="">Todas las tallas</option>
+            {SHOE_SIZES.map((item) => <option key={item} value={item}>{item}</option>)}
+          </select>
+        </label>
+        <label className="filter-field">
+          <span>Ingreso desde</span>
+          <input
+            type="date"
+            value={fromDate}
+            onChange={(event) => {
+              setFromDate(event.target.value);
+              setPage(1);
+            }}
+          />
+        </label>
+        <label className="filter-field">
+          <span>Ingreso hasta</span>
+          <input
+            type="date"
+            value={toDate}
+            onChange={(event) => {
+              setToDate(event.target.value);
+              setPage(1);
+            }}
+          />
+        </label>
+        <div className="filter-actions">
+          <button type="button" className="btn small ghost" onClick={clearFilters}>Limpiar</button>
+          <Link className="btn small ghost" to="/referencias">Volver</Link>
+        </div>
       </div>
 
       {error && <p className="form-error">{error}</p>}
@@ -172,7 +253,7 @@ export function ReferenceDetail() {
               <tr>
                 <td colSpan={8}>
                   {view === 'existencia'
-                    ? 'No hay pares en bodega para esta referencia. Ingresa un lote o revisa “Ya salieron”.'
+                    ? 'No hay pares en bodega con estos filtros.'
                     : 'No hay códigos con este filtro.'}
                 </td>
               </tr>

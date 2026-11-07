@@ -619,6 +619,25 @@ export const api = {
       where.push('p.reference_id = ?');
       params.push(String(query.referenceId));
     }
+    const size = String(query.size || '').trim();
+    if (size) {
+      if (!SHOE_SIZES.includes(size)) fail(400, `La talla ${size} no está en la curva del 34 al 45.`);
+      where.push('p.size = ?');
+      params.push(size);
+    }
+    const fromDay = String(query.from || '').trim();
+    const toDay = String(query.to || '').trim();
+    if (fromDay) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(fromDay)) fail(400, 'La fecha inicial no es válida.');
+      where.push('p.created_at >= ?');
+      params.push(new Date(`${fromDay}T00:00:00-05:00`).toISOString());
+    }
+    if (toDay) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(toDay)) fail(400, 'La fecha final no es válida.');
+      where.push('p.created_at <= ?');
+      params.push(new Date(`${toDay}T23:59:59.999-05:00`).toISOString());
+    }
+    if (fromDay && toDay && fromDay > toDay) fail(400, 'La fecha inicial no puede ser posterior a la final.');
     if (query.printable === '1') {
       where.push(`(
         p.printed_at IS NULL OR EXISTS (

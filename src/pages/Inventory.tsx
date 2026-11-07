@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { getPairs, getReferences } from '../api';
 import type { Pair, Reference } from '../types';
-import { formatWhen } from '../format';
+import { SHOE_SIZES, formatWhen } from '../format';
 import { useUi } from '../ui';
 import { PageHeader } from '../components/PageHeader';
 import { LabelPill, StatusPill } from '../components/StatusPill';
@@ -16,6 +16,9 @@ export function Inventory() {
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState(params.get('estado') || 'existencia');
   const [referenceId, setReferenceId] = useState(params.get('referencia') || '');
+  const [size, setSize] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [search, setSearch] = useState('');
   const [q, setQ] = useState('');
   const [selected, setSelected] = useState<string[]>([]);
@@ -52,16 +55,20 @@ export function Inventory() {
       pageSize: String(pageSize),
     };
     if (referenceId) query.referenceId = referenceId;
+    if (size) query.size = size;
+    if (fromDate) query.from = fromDate;
+    if (toDate) query.to = toDate;
     if (q) query.q = q;
     getPairs(query).then((result) => {
       if (cancel) return;
       setItems(result.items);
       setTotal(result.total);
+      setError('');
     }).catch((caught: unknown) => {
       if (!cancel) setError(caught instanceof Error ? caught.message : 'No se pudo cargar el inventario.');
     });
     return () => { cancel = true; };
-  }, [version, status, referenceId, q, page]);
+  }, [version, status, referenceId, size, fromDate, toDate, q, page]);
 
   const pages = Math.max(1, Math.ceil(total / pageSize));
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -94,21 +101,62 @@ export function Inventory() {
           </>
         }
       />
-      <div className="filters">
-        <input className="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar código, referencia, color o talla" />
-        <select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }}>
-          <option value="existencia">En existencia</option>
-          <option value="prioridad">Prioritarios</option>
-          <option value="inventario">Solo normales</option>
-          <option value="paginas">Salieron a páginas</option>
-          <option value="dropi">Salieron a Dropi</option>
-          <option value="salida">Todas las salidas</option>
-          <option value="todos">Todos</option>
-        </select>
-        <select value={referenceId} onChange={(event) => { setReferenceId(event.target.value); setPage(1); }}>
-          <option value="">Todas las referencias</option>
-          {refs.map((item) => <option key={item.id} value={item.id}>{item.code} · {item.name}</option>)}
-        </select>
+      <div className="filters filter-bar">
+        <label className="filter-field grow">
+          <span>Buscar</span>
+          <input className="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Código, referencia, color o talla" />
+        </label>
+        <label className="filter-field">
+          <span>Estado</span>
+          <select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }}>
+            <option value="existencia">En existencia</option>
+            <option value="prioridad">Prioritarios</option>
+            <option value="inventario">Solo normales</option>
+            <option value="paginas">Salieron a páginas</option>
+            <option value="dropi">Salieron a Dropi</option>
+            <option value="salida">Todas las salidas</option>
+            <option value="todos">Todos</option>
+          </select>
+        </label>
+        <label className="filter-field">
+          <span>Referencia</span>
+          <select value={referenceId} onChange={(event) => { setReferenceId(event.target.value); setPage(1); }}>
+            <option value="">Todas las referencias</option>
+            {refs.map((item) => <option key={item.id} value={item.id}>{item.code} · {item.name}</option>)}
+          </select>
+        </label>
+        <label className="filter-field">
+          <span>Talla</span>
+          <select value={size} onChange={(event) => { setSize(event.target.value); setPage(1); }}>
+            <option value="">Todas las tallas</option>
+            {SHOE_SIZES.map((item) => <option key={item} value={item}>{item}</option>)}
+          </select>
+        </label>
+        <label className="filter-field">
+          <span>Ingreso desde</span>
+          <input type="date" value={fromDate} onChange={(event) => { setFromDate(event.target.value); setPage(1); }} />
+        </label>
+        <label className="filter-field">
+          <span>Ingreso hasta</span>
+          <input type="date" value={toDate} onChange={(event) => { setToDate(event.target.value); setPage(1); }} />
+        </label>
+        <div className="filter-actions">
+          <button
+            type="button"
+            className="btn small ghost"
+            onClick={() => {
+              setStatus('existencia');
+              setReferenceId('');
+              setSize('');
+              setFromDate('');
+              setToDate('');
+              setSearch('');
+              setPage(1);
+            }}
+          >
+            Limpiar
+          </button>
+        </div>
       </div>
       {error && <p className="form-error">{error}</p>}
       <div className="table-wrap">
