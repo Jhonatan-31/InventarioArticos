@@ -13,14 +13,17 @@ export function StatusPill({
   returnedAt?: string | null;
 }) {
   const normalized = normalizeStatus(status);
-  if (normalized === 'salida' && channel === 'paginas') {
-    return <span className="pill paginas">Salió a páginas</span>;
+  const exitChannel = String(channel || '').trim().toLowerCase();
+
+  // Páginas = morado · Dropi = naranja · Fábrica = azul
+  if (normalized === 'salida' && exitChannel === 'paginas') {
+    return <span className="pill channel-paginas paginas">Salió a páginas</span>;
   }
-  if (normalized === 'salida' && channel === 'dropi') {
-    return <span className="pill dropi">Salió a Dropi</span>;
+  if (normalized === 'salida' && exitChannel === 'dropi') {
+    return <span className="pill channel-dropi dropi">Salió a Dropi</span>;
   }
-  if (normalized === 'salida' && channel === 'fabrica') {
-    return <span className="pill fabrica">Salió a fábrica</span>;
+  if (normalized === 'salida' && exitChannel === 'fabrica') {
+    return <span className="pill channel-fabrica fabrica">Salió a fábrica</span>;
   }
   if (normalized === 'prioridad' || normalized === 'devolucion') {
     return <span className="pill devolucion">Devolución</span>;

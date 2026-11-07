@@ -345,16 +345,20 @@ a { color: var(--cognac-deep); }
 .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .pill.inventario, .pill.entrada { color: var(--green); background: #e5f2ea; }
 .pill.salida, .pill.reimpresion { color: #5c534c; background: #efe8e0; }
-.pill.paginas { color: #5b2d8e; background: #efe6f8; }
-.pill.dropi { color: #b85a12; background: #fde9d6; }
-.pill.fabrica { color: #1d4f8c; background: #e3eefc; }
+/* Canales: páginas = morado, Dropi = naranja, fábrica = azul */
+.pill.paginas,
+.pill.channel-paginas { color: #6b21a8 !important; background: #f3e8ff !important; }
+.pill.dropi,
+.pill.channel-dropi { color: #c2410c !important; background: #ffedd5 !important; }
+.pill.fabrica,
+.pill.channel-fabrica { color: #1d4ed8 !important; background: #dbeafe !important; }
 .accounts-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; width: 100%; }
-.account-card.paginas { border-color: #d7c4ef; box-shadow: inset 3px 0 0 #7a45b5; }
-.account-card.dropi { border-color: #f0c79a; box-shadow: inset 3px 0 0 #d97706; }
-.account-card.fabrica { border-color: #b7ccec; box-shadow: inset 3px 0 0 #2563ab; }
-.account-card.paginas .balance dd { color: #5b2d8e; }
-.account-card.dropi .balance dd { color: #b85a12; }
-.account-card.fabrica .balance dd { color: #1d4f8c; }
+.account-card.paginas { border-color: #e9d5ff; box-shadow: inset 3px 0 0 #7c3aed; }
+.account-card.dropi { border-color: #fed7aa; box-shadow: inset 3px 0 0 #ea580c; }
+.account-card.fabrica { border-color: #bfdbfe; box-shadow: inset 3px 0 0 #2563eb; }
+.account-card.paginas .balance dd { color: #6b21a8; }
+.account-card.dropi .balance dd { color: #c2410c; }
+.account-card.fabrica .balance dd { color: #1d4ed8; }
 .pill.prioridad, .pill.devolucion, .pill.novedad { color: var(--ox); background: #f8e7e4; }
 .pill.label-por_confirmar { color: #7a4b12; background: #f8efd8; }
 .pill.label-activa { color: var(--green); background: #e5f2ea; }
@@ -520,15 +524,15 @@ table.bodega tfoot td { position: sticky; bottom: 0; background: #f6efe6; font-w
 
 #barcode-reader { border: 0 !important; width: 100%; }
 #barcode-reader video { width: 100%; border-radius: 12px; display: block; }
-.scanner-page.paginas .mode-note { background: #efe6f8; border-left: 3px solid #7a45b5; }
-.scanner-page.dropi .mode-note { background: #fde9d6; border-left: 3px solid #d97706; }
-.scanner-page.fabrica .mode-note { background: #e3eefc; border-left: 3px solid #2563ab; }
-.scanner-page.paginas .scan-result.ok { background: #efe6f8; }
-.scanner-page.dropi .scan-result.ok { background: #fde9d6; }
-.scanner-page.fabrica .scan-result.ok { background: #e3eefc; }
-.filter-ranges button.channel-paginas.active { background: #5b2d8e; border-color: #5b2d8e; }
-.filter-ranges button.channel-dropi.active { background: #b85a12; border-color: #b85a12; }
-.filter-ranges button.channel-fabrica.active { background: #1d4f8c; border-color: #1d4f8c; }
+.scanner-page.paginas .mode-note { background: #f3e8ff; border-left: 3px solid #7c3aed; }
+.scanner-page.dropi .mode-note { background: #ffedd5; border-left: 3px solid #ea580c; }
+.scanner-page.fabrica .mode-note { background: #dbeafe; border-left: 3px solid #2563eb; }
+.scanner-page.paginas .scan-result.ok { background: #f3e8ff; }
+.scanner-page.dropi .scan-result.ok { background: #ffedd5; }
+.scanner-page.fabrica .scan-result.ok { background: #dbeafe; }
+.filter-ranges button.channel-paginas.active { background: #6b21a8; border-color: #6b21a8; color: #fff; }
+.filter-ranges button.channel-dropi.active { background: #c2410c; border-color: #c2410c; color: #fff; }
+.filter-ranges button.channel-fabrica.active { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
 
 .sheet-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; width: 100%; }
 .sheet-card { padding: 14px; }
