@@ -1,8 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getPairs, getReference, getReferences } from '../api';
 import type { Pair, Reference } from '../types';
 import { SHOE_SIZES, formatMoney, formatWhen } from '../format';
+import {
+  DATE_RANGE_OPTIONS,
+  type DateRangeKey,
+  handleDateFilterEnterKey,
+  resolveDateRange,
+} from '../dateFilterEnter';
 import { useUi } from '../ui';
 import { PageHeader } from '../components/PageHeader';
 import { LabelPill, StatusPill } from '../components/StatusPill';
@@ -18,10 +24,14 @@ export function ReferenceDetail() {
   const [page, setPage] = useState(1);
   const [view, setView] = useState<'existencia' | 'salida' | 'todos'>('existencia');
   const [size, setSize] = useState('');
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [appliedFrom, setAppliedFrom] = useState('');
+  const [appliedTo, setAppliedTo] = useState('');
+  const [dateRange, setDateRange] = useState<DateRangeKey>('all');
   const [selected, setSelected] = useState<string[]>([]);
   const [error, setError] = useState('');
+  const dateEnterRef = useRef(0);
   const pageSize = 50;
 
   useEffect(() => {
@@ -54,8 +64,8 @@ export function ReferenceDetail() {
       pageSize: String(pageSize),
     };
     if (size) query.size = size;
-    if (fromDate) query.from = fromDate;
-    if (toDate) query.to = toDate;
+    if (appliedFrom) query.from = appliedFrom;
+    if (appliedTo) query.to = appliedTo;
     getPairs(query).then((result) => {
       if (cancel) return;
       setItems(result.items);
@@ -65,7 +75,7 @@ export function ReferenceDetail() {
       if (!cancel) setError(caught instanceof Error ? caught.message : 'No se pudieron cargar los códigos.');
     });
     return () => { cancel = true; };
-  }, [id, version, view, size, fromDate, toDate, page]);
+  }, [id, version, view, size, appliedFrom, appliedTo, page]);
 
   const pages = Math.max(1, Math.ceil(total / pageSize));
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -86,11 +96,31 @@ export function ReferenceDetail() {
     });
   }
 
+  function applyDateFilter() {
+    setAppliedFrom(dateFrom);
+    setAppliedTo(dateTo);
+    setDateRange(dateFrom || dateTo ? 'custom' : 'all');
+    setPage(1);
+  }
+
+  function pickRange(key: DateRangeKey) {
+    const range = resolveDateRange(key);
+    setDateRange(key);
+    setDateFrom(range.from);
+    setDateTo(range.to);
+    setAppliedFrom(range.from);
+    setAppliedTo(range.to);
+    setPage(1);
+  }
+
   function clearFilters() {
     setView('existencia');
     setSize('');
-    setFromDate('');
-    setToDate('');
+    setDateFrom('');
+    setDateTo('');
+    setAppliedFrom('');
+    setAppliedTo('');
+    setDateRange('all');
     setPage(1);
   }
 
@@ -109,9 +139,7 @@ export function ReferenceDetail() {
       <PageHeader
         eyebrow="Referencia"
         title={reference ? reference.code : 'Cargando…'}
-        text={reference
-          ? `${reference.name} · ${reference.color}`
-          : 'Cargando la referencia y sus códigos.'}
+        text={reference ? `${reference.name} · ${reference.color}` : 'Cargando la referencia y sus códigos.'}
         actions={
           reference && (
             <>
@@ -154,11 +182,58 @@ export function ReferenceDetail() {
         </section>
       )}
 
-      <div className="filters filter-bar">
-        <label className="filter-field">
-          <span>Referencia</span>
+      <div className="panel filter-panel">
+        <div className="inventory-toolbar">
+          <div className="filter-ranges" role="tablist" aria-label="Periodo de ingreso">
+            {DATE_RANGE_OPTIONS.map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                className={dateRange === item.key ? 'active' : ''}
+                onClick={() => pickRange(item.key)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+          <div className="filter-dates">
+            <input
+              type="date"
+              className="date-input"
+              value={dateFrom}
+              onChange={(event) => {
+                setDateFrom(event.target.value);
+                setDateRange('custom');
+              }}
+              onKeyDown={(event) => handleDateFilterEnterKey(event, applyDateFilter, dateEnterRef)}
+              aria-label="Ingreso desde"
+              title="Desde — Enter siguiente · doble Enter filtrar"
+            />
+            <input
+              type="date"
+              className="date-input"
+              value={dateTo}
+              onChange={(event) => {
+                setDateTo(event.target.value);
+                setDateRange('custom');
+              }}
+              onKeyDown={(event) => handleDateFilterEnterKey(event, applyDateFilter, dateEnterRef)}
+              aria-label="Ingreso hasta"
+              title="Hasta — Enter siguiente · doble Enter filtrar"
+            />
+            <button
+              type="button"
+              className="btn ghost filter-go"
+              disabled={!dateFrom && !dateTo}
+              onClick={applyDateFilter}
+            >
+              Filtrar
+            </button>
+          </div>
+          <span className="filter-caption">Filtros</span>
           <select
             value={id}
+            aria-label="Referencia"
             onChange={(event) => {
               navigate(`/referencias/${event.target.value}`);
               setPage(1);
@@ -168,11 +243,9 @@ export function ReferenceDetail() {
               <option key={item.id} value={item.id}>{item.code} · {item.name}</option>
             ))}
           </select>
-        </label>
-        <label className="filter-field">
-          <span>Estado</span>
           <select
             value={view}
+            aria-label="Estado"
             onChange={(event) => {
               setView(event.target.value as 'existencia' | 'salida' | 'todos');
               setPage(1);
@@ -182,11 +255,9 @@ export function ReferenceDetail() {
             <option value="salida">Ya salieron</option>
             <option value="todos">Todos los códigos</option>
           </select>
-        </label>
-        <label className="filter-field">
-          <span>Talla</span>
           <select
             value={size}
+            aria-label="Talla"
             onChange={(event) => {
               setSize(event.target.value);
               setPage(1);
@@ -195,36 +266,9 @@ export function ReferenceDetail() {
             <option value="">Todas las tallas</option>
             {SHOE_SIZES.map((item) => <option key={item} value={item}>{item}</option>)}
           </select>
-        </label>
-        <label className="filter-field">
-          <span>Ingreso desde</span>
-          <input
-            type="date"
-            value={fromDate}
-            onChange={(event) => {
-              setFromDate(event.target.value);
-              setPage(1);
-            }}
-          />
-        </label>
-        <label className="filter-field">
-          <span>Ingreso hasta</span>
-          <input
-            type="date"
-            value={toDate}
-            onChange={(event) => {
-              setToDate(event.target.value);
-              setPage(1);
-            }}
-          />
-        </label>
-        <label className="filter-field">
-          <span>Acciones</span>
-          <div className="filter-actions">
-            <button type="button" className="btn ghost" onClick={clearFilters}>Limpiar</button>
-            <Link className="btn ghost" to="/referencias">Volver</Link>
-          </div>
-        </label>
+          <button type="button" className="btn ghost" onClick={clearFilters}>Limpiar</button>
+          <Link className="btn ghost" to="/referencias">Volver</Link>
+        </div>
       </div>
 
       {error && <p className="form-error">{error}</p>}

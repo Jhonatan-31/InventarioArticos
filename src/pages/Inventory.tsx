@@ -1,8 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { getPairs, getReferences } from '../api';
 import type { Pair, Reference } from '../types';
 import { SHOE_SIZES, formatWhen } from '../format';
+import {
+  DATE_RANGE_OPTIONS,
+  type DateRangeKey,
+  handleDateFilterEnterKey,
+  resolveDateRange,
+} from '../dateFilterEnter';
 import { useUi } from '../ui';
 import { PageHeader } from '../components/PageHeader';
 import { LabelPill, StatusPill } from '../components/StatusPill';
@@ -17,12 +23,16 @@ export function Inventory() {
   const [status, setStatus] = useState(params.get('estado') || 'existencia');
   const [referenceId, setReferenceId] = useState(params.get('referencia') || '');
   const [size, setSize] = useState('');
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [appliedFrom, setAppliedFrom] = useState('');
+  const [appliedTo, setAppliedTo] = useState('');
+  const [dateRange, setDateRange] = useState<DateRangeKey>('all');
   const [search, setSearch] = useState('');
   const [q, setQ] = useState('');
   const [selected, setSelected] = useState<string[]>([]);
   const [error, setError] = useState('');
+  const dateEnterRef = useRef(0);
   const pageSize = 25;
 
   useEffect(() => {
@@ -56,8 +66,8 @@ export function Inventory() {
     };
     if (referenceId) query.referenceId = referenceId;
     if (size) query.size = size;
-    if (fromDate) query.from = fromDate;
-    if (toDate) query.to = toDate;
+    if (appliedFrom) query.from = appliedFrom;
+    if (appliedTo) query.to = appliedTo;
     if (q) query.q = q;
     getPairs(query).then((result) => {
       if (cancel) return;
@@ -68,7 +78,7 @@ export function Inventory() {
       if (!cancel) setError(caught instanceof Error ? caught.message : 'No se pudo cargar el inventario.');
     });
     return () => { cancel = true; };
-  }, [version, status, referenceId, size, fromDate, toDate, q, page]);
+  }, [version, status, referenceId, size, appliedFrom, appliedTo, q, page]);
 
   const pages = Math.max(1, Math.ceil(total / pageSize));
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -86,6 +96,36 @@ export function Inventory() {
     });
   }
 
+  function applyDateFilter() {
+    setAppliedFrom(dateFrom);
+    setAppliedTo(dateTo);
+    setDateRange(dateFrom || dateTo ? 'custom' : 'all');
+    setPage(1);
+  }
+
+  function pickRange(key: DateRangeKey) {
+    const range = resolveDateRange(key);
+    setDateRange(key);
+    setDateFrom(range.from);
+    setDateTo(range.to);
+    setAppliedFrom(range.from);
+    setAppliedTo(range.to);
+    setPage(1);
+  }
+
+  function clearFilters() {
+    setStatus('existencia');
+    setReferenceId('');
+    setSize('');
+    setDateFrom('');
+    setDateTo('');
+    setAppliedFrom('');
+    setAppliedTo('');
+    setDateRange('all');
+    setSearch('');
+    setPage(1);
+  }
+
   return (
     <div className="stack page">
       <PageHeader
@@ -101,14 +141,63 @@ export function Inventory() {
           </>
         }
       />
-      <div className="filters filter-bar">
-        <label className="filter-field grow">
-          <span>Buscar</span>
-          <input className="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Código, referencia, color o talla" />
-        </label>
-        <label className="filter-field">
-          <span>Estado</span>
-          <select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }}>
+      <div className="panel filter-panel">
+        <div className="inventory-toolbar">
+          <input
+            className="search toolbar-search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Buscar código, referencia, color o talla"
+            aria-label="Buscar"
+          />
+          <div className="filter-ranges" role="tablist" aria-label="Periodo de ingreso">
+            {DATE_RANGE_OPTIONS.map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                className={dateRange === item.key ? 'active' : ''}
+                onClick={() => pickRange(item.key)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+          <div className="filter-dates">
+            <input
+              type="date"
+              className="date-input"
+              value={dateFrom}
+              onChange={(event) => {
+                setDateFrom(event.target.value);
+                setDateRange('custom');
+              }}
+              onKeyDown={(event) => handleDateFilterEnterKey(event, applyDateFilter, dateEnterRef)}
+              aria-label="Ingreso desde"
+              title="Desde — Enter siguiente · doble Enter filtrar"
+            />
+            <input
+              type="date"
+              className="date-input"
+              value={dateTo}
+              onChange={(event) => {
+                setDateTo(event.target.value);
+                setDateRange('custom');
+              }}
+              onKeyDown={(event) => handleDateFilterEnterKey(event, applyDateFilter, dateEnterRef)}
+              aria-label="Ingreso hasta"
+              title="Hasta — Enter siguiente · doble Enter filtrar"
+            />
+            <button
+              type="button"
+              className="btn ghost filter-go"
+              disabled={!dateFrom && !dateTo}
+              onClick={applyDateFilter}
+            >
+              Filtrar
+            </button>
+          </div>
+          <span className="filter-caption">Filtros</span>
+          <select value={status} aria-label="Estado" onChange={(event) => { setStatus(event.target.value); setPage(1); }}>
             <option value="existencia">En existencia</option>
             <option value="prioridad">Prioritarios</option>
             <option value="inventario">Solo normales</option>
@@ -117,49 +206,16 @@ export function Inventory() {
             <option value="salida">Todas las salidas</option>
             <option value="todos">Todos</option>
           </select>
-        </label>
-        <label className="filter-field">
-          <span>Referencia</span>
-          <select value={referenceId} onChange={(event) => { setReferenceId(event.target.value); setPage(1); }}>
+          <select value={referenceId} aria-label="Referencia" onChange={(event) => { setReferenceId(event.target.value); setPage(1); }}>
             <option value="">Todas las referencias</option>
             {refs.map((item) => <option key={item.id} value={item.id}>{item.code} · {item.name}</option>)}
           </select>
-        </label>
-        <label className="filter-field">
-          <span>Talla</span>
-          <select value={size} onChange={(event) => { setSize(event.target.value); setPage(1); }}>
+          <select value={size} aria-label="Talla" onChange={(event) => { setSize(event.target.value); setPage(1); }}>
             <option value="">Todas las tallas</option>
             {SHOE_SIZES.map((item) => <option key={item} value={item}>{item}</option>)}
           </select>
-        </label>
-        <label className="filter-field">
-          <span>Ingreso desde</span>
-          <input type="date" value={fromDate} onChange={(event) => { setFromDate(event.target.value); setPage(1); }} />
-        </label>
-        <label className="filter-field">
-          <span>Ingreso hasta</span>
-          <input type="date" value={toDate} onChange={(event) => { setToDate(event.target.value); setPage(1); }} />
-        </label>
-        <label className="filter-field">
-          <span>Acciones</span>
-          <div className="filter-actions single">
-            <button
-              type="button"
-              className="btn ghost"
-              onClick={() => {
-                setStatus('existencia');
-                setReferenceId('');
-                setSize('');
-                setFromDate('');
-                setToDate('');
-                setSearch('');
-                setPage(1);
-              }}
-            >
-              Limpiar
-            </button>
-          </div>
-        </label>
+          <button type="button" className="btn ghost" onClick={clearFilters}>Limpiar</button>
+        </div>
       </div>
       {error && <p className="form-error">{error}</p>}
       <div className="table-wrap">

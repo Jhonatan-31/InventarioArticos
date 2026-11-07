@@ -225,79 +225,104 @@ a { color: var(--cognac-deep); }
 .actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .filters {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: center;
   justify-content: flex-start;
   width: 100%;
 }
 .filters .search { width: min(320px, 100%); max-width: 100%; flex: 1 1 180px; }
 .filters select { width: auto; flex: 1 1 140px; min-width: 0; }
-.filter-bar {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
-  gap: 12px;
-  align-items: end;
-  padding: 14px 16px;
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  box-shadow: var(--shadow);
-}
-.filter-field {
+.filter-panel { padding: 0; overflow: hidden; }
+.inventory-toolbar {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px;
+}
+.inventory-toolbar > .toolbar-search {
+  flex: 1 1 220px;
+  min-width: 180px;
+  max-width: 320px;
+}
+.inventory-toolbar > select {
+  flex: 0 1 150px;
+  min-width: 130px;
+  height: 40px;
+  min-height: 40px;
+  border: 1px solid #ddcfc0;
+  border-radius: 10px;
+  background: #fff;
+  padding: 0 10px;
+  font-size: 13px;
+}
+.inventory-toolbar .btn {
+  height: 40px;
+  min-height: 40px;
+  padding: 0 14px;
+}
+.filter-ranges,
+.filter-dates {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
   gap: 6px;
-  min-width: 0;
-  width: 100%;
+  flex: 0 1 auto;
 }
-.filter-field.grow { grid-column: span 2; }
-.filter-field > span {
-  font-size: 12px;
-  color: var(--muted);
-  line-height: 1.2;
-  min-height: 16px;
-}
-.filter-field input,
-.filter-field select,
-.filter-field .search {
-  width: 100%;
-  height: 44px;
-  min-height: 44px;
+.filter-ranges button {
+  height: 40px;
+  min-height: 40px;
   padding: 0 12px;
-  line-height: 1.2;
+  border-radius: 10px;
+  border: 1px solid #ddcfc0;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--muted);
+  white-space: nowrap;
 }
-.filter-field input[type="date"] {
+.filter-ranges button.active {
+  background: #1c1612;
+  color: #fff8f3;
+  border-color: #1c1612;
+}
+.date-input {
+  width: 150px;
+  min-width: 150px;
+  flex: 0 0 150px;
+  height: 40px;
+  min-height: 40px;
+  border: 1px solid #ddcfc0;
+  border-radius: 10px;
+  background: #fff;
+  padding: 0 10px;
+  font-size: 13px;
+  color: var(--ink);
   appearance: none;
   -webkit-appearance: none;
 }
-.filter-actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  width: 100%;
-  align-self: end;
+.filter-caption {
+  display: inline-flex;
+  align-items: center;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0 2px;
 }
-.filter-actions .btn {
-  width: 100%;
-  min-height: 44px;
-  height: 44px;
-  padding: 0 12px;
-}
-.filter-actions.single { grid-template-columns: 1fr; }
 .search,
 .field input,
 .field select,
 .field textarea,
-.filters select,
-.filter-field input,
-.filter-field select {
+.filters select {
   border: 1px solid #ddcfc0;
   background: #fffdfb;
   border-radius: 10px;
   padding: 0 12px;
-  min-height: 44px;
-  height: 44px;
+  min-height: 40px;
+  height: 40px;
 }
 .field input, .field select, .field textarea, .search { width: 100%; max-width: 100%; }
 .field { display: flex; flex-direction: column; gap: 6px; min-width: 0; width: 100%; }
@@ -592,11 +617,15 @@ table.bodega tfoot td { position: sticky; bottom: 0; background: #f6efe6; font-w
   .bar-row { grid-template-columns: 1fr; }
   .actions { white-space: normal; }
   .filters .search,
-  .filters select,
-  .filter-field { flex: 1 1 100%; max-width: 100%; width: 100%; }
-  .filter-bar { grid-template-columns: 1fr; }
-  .filter-field.grow { grid-column: auto; }
-  .filter-actions { width: 100%; }
+  .filters select { flex: 1 1 100%; max-width: 100%; width: 100%; }
+  .inventory-toolbar > .toolbar-search,
+  .inventory-toolbar > select,
+  .filter-ranges,
+  .filter-dates { flex: 1 1 100%; min-width: 0; max-width: 100%; }
+  .filter-ranges,
+  .filter-dates { flex-wrap: wrap; }
+  .date-input { flex: 1 1 140px; width: auto; min-width: 0; }
+  .filter-caption { display: none; }
   .page-actions { margin-top: 0; }
   .bodega-wrap { max-height: calc(100dvh - 220px); }
   .print-root { grid-template-columns: 1fr; max-height: 55vh; }
