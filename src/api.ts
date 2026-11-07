@@ -18,21 +18,34 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   try {
     response = await fetch(url, {
       ...init,
+      credentials: 'same-origin',
       headers: {
         ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
         ...(init?.headers || {}),
       },
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error('El servidor tardó demasiado en responder.');
+    }
     throw new Error('No hay conexión con el servidor del inventario.');
   }
   const text = await response.text();
-  const data = text ? JSON.parse(text) as { error?: string } : {};
+  let data: { error?: string } = {};
+  if (text) {
+    try {
+      data = JSON.parse(text) as { error?: string };
+    } catch {
+      throw new Error('El servidor respondió de forma inesperada.');
+    }
+  }
   if (!response.ok) throw new Error(data.error || 'No se pudo completar la operación.');
   return data as T;
 }
 
-export const getSession = () => request<{ required: boolean; ok: boolean }>('/api/session');
+export const getSession = (signal?: AbortSignal) => (
+  request<{ required: boolean; ok: boolean }>('/api/session', { signal })
+);
 
 export function login(password: string) {
   return request<{ ok: boolean }>('/api/login', {

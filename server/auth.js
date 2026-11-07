@@ -79,7 +79,11 @@ export function login(value, req) {
 }
 
 function cookie(value, req, maxAge) {
-  const secure = req.headers['x-forwarded-proto'] === 'https' || process.env.EVALOOK_SECURE === '1';
+  const forwarded = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim().toLowerCase();
+  const secure = forwarded === 'https'
+    || req.secure === true
+    || process.env.EVALOOK_SECURE === '1'
+    || process.env.NODE_ENV === 'production';
   const parts = [
     `${COOKIE}=${encodeURIComponent(value)}`,
     'Path=/',
