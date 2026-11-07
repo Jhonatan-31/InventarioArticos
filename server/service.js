@@ -464,6 +464,12 @@ export const api = {
     return listRefs();
   },
 
+  getReference(id) {
+    const ref = listRefs().find((item) => item.id === String(id));
+    if (!ref) fail(404, 'La referencia no existe.');
+    return ref;
+  },
+
   createReference(input) {
     const code = cleanCode(input.code);
     const name = requiredText(input.name, 'La descripción', 80);
@@ -555,7 +561,9 @@ export const api = {
     if (total < 1 || total > 1000) fail(400, 'Ingresa entre 1 y 1000 pares en total.');
     const cleanNote = cleanOptional(note, 300);
     return transaction(() => {
-      const start = Number(db.prepare(`SELECT value FROM meta WHERE key = 'next_qr'`).get().value);
+      const metaNext = Number(db.prepare(`SELECT value FROM meta WHERE key = 'next_qr'`).get().value);
+      const maxUsed = Number(db.prepare(`SELECT COALESCE(MAX(qr_number), 0) AS n FROM pairs`).get().n);
+      const start = Math.max(metaNext, maxUsed + 1);
       const insertPair = db.prepare(`
         INSERT INTO pairs (
           id, qr_number, qr_code, payload, reference_id, size, status, created_at, exit_count, return_count

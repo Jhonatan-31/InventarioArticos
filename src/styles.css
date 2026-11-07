@@ -428,8 +428,16 @@ table.bodega tfoot td { position: sticky; bottom: 0; background: #f6efe6; font-w
   display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap;
   border-bottom: 1px solid #111; padding-bottom: 4px; font-size: 11px; letter-spacing: 0.08em;
 }
-.shoe-label-copy { display: flex; flex-direction: column; min-width: 0; }
-.shoe-label-copy b { font-family: var(--serif); font-size: clamp(20px, 5vw, 28px); line-height: 1.05; overflow-wrap: anywhere; }
+.shoe-label-number {
+  font-family: var(--serif);
+  font-size: clamp(28px, 6vw, 36px);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.shoe-label-copy { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .shoe-label-copy span, .shoe-label-copy small { font-size: 13px; line-height: 1.3; overflow-wrap: anywhere; }
 
 .gate {

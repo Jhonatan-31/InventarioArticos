@@ -72,7 +72,7 @@ function Fields({ value, onChange }: { value: FormState; onChange: (next: FormSt
     <div className="form-grid">
       <label className="field">
         <span>Referencia</span>
-        <input value={value.code} onChange={(event) => set('code', event.target.value)} placeholder="OX-40" required />
+        <input value={value.code} onChange={(event) => set('code', event.target.value)} placeholder="575" required />
       </label>
       <label className="field">
         <span>Descripción</span>
@@ -207,7 +207,7 @@ export function References() {
       <PageHeader
         eyebrow="Catálogo"
         title="Referencias"
-        text="La referencia guarda el modelo, el color y el precio. Las tallas se cargan después, en la entrada, par por par."
+        text="Crea la referencia (por ejemplo 575). Luego ingresa los pares de una factura y el sistema genera un código único por cada par. Esos códigos nunca se reutilizan."
       />
       <section className="panel">
         <header className="panel-head"><h2>Nueva referencia</h2></header>
@@ -223,7 +223,7 @@ export function References() {
         <section className="callout">
           <div>
             <strong>{created.code} quedó creada</strong>
-            <p>Ahora escribe cuántos pares hay de cada número. El sistema suma la existencia y el valor.</p>
+            <p>Ahora ingresa los pares por talla. Cada par recibe un código nuevo y único.</p>
           </div>
           <Link className="btn primary" to={`/entrada?referencia=${created.id}`}>Ingresar por talla</Link>
         </section>
@@ -251,7 +251,7 @@ export function References() {
               {visible.length === 0 && <tr><td colSpan={8}>No hay referencias para mostrar.</td></tr>}
               {visible.map((item) => (
                 <tr key={item.id} className={item.priority > 0 ? 'priority' : ''}>
-                  <td className="mono">{item.code}</td>
+                  <td className="mono"><Link to={`/referencias/${item.id}`}>{item.code}</Link></td>
                   <td>{item.name}<small>{item.line}{item.silhouette ? ` · ${item.silhouette}` : ''}</small></td>
                   <td>{item.color}</td>
                   <td>{item.location || '—'}</td>
@@ -259,6 +259,7 @@ export function References() {
                   <td>{item.inStock}</td>
                   <td className="money">{formatMoney(item.inStock * item.price)}</td>
                   <td className="actions">
+                    <Link className="btn small" to={`/referencias/${item.id}`}>Ver códigos</Link>
                     <Link className="btn small" to={`/entrada?referencia=${item.id}`}>Ingresar</Link>
                     <button type="button" className="btn small ghost" onClick={() => { setEditing(item); setEditForm(fromReference(item)); }}>Editar</button>
                     {item.total === 0 && <button type="button" className="btn small ghost" onClick={() => remove(item)}>Eliminar</button>}

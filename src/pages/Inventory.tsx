@@ -15,7 +15,7 @@ export function Inventory() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState(params.get('estado') || 'existencia');
-  const [referenceId, setReferenceId] = useState('');
+  const [referenceId, setReferenceId] = useState(params.get('referencia') || '');
   const [search, setSearch] = useState('');
   const [q, setQ] = useState('');
   const [selected, setSelected] = useState<string[]>([]);
@@ -24,10 +24,10 @@ export function Inventory() {
 
   useEffect(() => {
     const estado = params.get('estado');
-    if (estado) {
-      setStatus(estado);
-      setPage(1);
-    }
+    const referencia = params.get('referencia');
+    if (estado) setStatus(estado);
+    if (referencia) setReferenceId(referencia);
+    if (estado || referencia) setPage(1);
   }, [params]);
 
   useEffect(() => {

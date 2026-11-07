@@ -71,7 +71,7 @@ export function Entrada() {
       <PageHeader
         eyebrow="Ingreso"
         title="Entrada de inventario"
-        text="Elige la referencia y escribe cuántos pares entran en cada número. El sistema suma los pares, calcula la plata y asigna un código de barras a cada uno."
+        text="Elige la referencia (por ejemplo 575) y escribe cuántos pares entran por talla. Si entran 70 pares, se crean 70 códigos nuevos. Nunca se reutilizan códigos que ya existan."
       />
       <form className="panel stack" onSubmit={submit}>
         <label className="field">
@@ -143,14 +143,21 @@ export function Entrada() {
           <div>
             <strong>Entraron {batch.quantity} pares</strong>
             <p>
-              Códigos {batch.from}{batch.from !== batch.to ? ` al ${batch.to}` : ''}.
+              Códigos nuevos {batch.from}{batch.from !== batch.to ? ` al ${batch.to}` : ''}.
               {' '}
               {Object.entries(batch.bySize).map(([size, qty]) => `${size}: ${qty}`).join(' · ')}
+              {' '}
+              Estos números no se vuelven a asignar.
             </p>
           </div>
-          <button type="button" className="btn primary" onClick={() => openPrint(batch.pairs.map((pair) => pair.id))}>
-            Imprimir códigos
-          </button>
+          <div className="page-actions">
+            {reference && (
+              <Link className="btn" to={`/referencias/${reference.id}`}>Ver códigos de la referencia</Link>
+            )}
+            <button type="button" className="btn primary" onClick={() => openPrint(batch.pairs.map((pair) => pair.id))}>
+              Imprimir códigos
+            </button>
+          </div>
         </section>
       )}
     </div>

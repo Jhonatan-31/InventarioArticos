@@ -8,6 +8,7 @@ import { Entrada } from './pages/Entrada';
 import { Incidents } from './pages/Incidents';
 import { Inventory } from './pages/Inventory';
 import { Labels } from './pages/Labels';
+import { ReferenceDetail } from './pages/ReferenceDetail';
 import { References } from './pages/References';
 import { Reports } from './pages/Reports';
 import { Scanner } from './pages/Scanner';
@@ -22,6 +23,7 @@ export function App() {
           <Route element={<Layout />}>
             <Route index element={<Dashboard />} />
             <Route path="referencias" element={<References />} />
+            <Route path="referencias/:id" element={<ReferenceDetail />} />
             <Route path="inventario" element={<Bodega />} />
             <Route path="entrada" element={<Entrada />} />
             <Route path="pares" element={<Inventory />} />

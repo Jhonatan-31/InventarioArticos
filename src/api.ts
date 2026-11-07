@@ -64,6 +64,7 @@ export function logout() {
 export const getDashboard = () => request<DashboardData>('/api/dashboard');
 export const getSequence = () => request<{ nextQr: string; nextNumber: number }>('/api/sequence');
 export const getReferences = () => request<Reference[]>('/api/references');
+export const getReference = (id: string) => request<Reference>(`/api/references/${id}`);
 export const getBodega = () => request<BodegaData>('/api/bodega');
 export const getAccounting = () => request<AccountingData>('/api/accounting');
 

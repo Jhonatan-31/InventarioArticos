@@ -55,6 +55,10 @@ app.get('/api/references', (_req, res) => {
   res.json(api.listReferences());
 });
 
+app.get('/api/references/:id', (req, res) => {
+  res.json(api.getReference(req.params.id));
+});
+
 app.post('/api/references', (req, res) => {
   res.status(201).json(api.createReference(req.body || {}));
 });

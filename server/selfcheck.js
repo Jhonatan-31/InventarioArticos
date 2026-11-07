@@ -56,6 +56,13 @@ try {
   const dropi = api.scan('00002', 'salida', 'dropi');
   assert(dropi.pair.channel === 'dropi' && dropi.message.includes('Dropi'), 'la salida a Dropi queda aparte');
 
+  const oxfordView = api.getReference(oxford.id);
+  assert(oxfordView.code === 'OX-40' && oxfordView.inStock === 1, 'la referencia muestra solo lo que sigue en bodega');
+  const inBodega = api.listPairs({ referenceId: oxford.id, status: 'existencia', pageSize: '50' });
+  assert(inBodega.total === 1 && !inBodega.items.some((item) => item.status === 'salida'), 'al mirar la referencia no aparecen los códigos que ya salieron');
+  const moreStock = api.addStock(oxford.id, { 40: 2 }, 'Factura 11');
+  assert(moreStock.from === '00005' && moreStock.to === '00006', 'un ingreso nuevo no reutiliza códigos que ya existían');
+
   let accounts = api.accounting();
   assert(accounts.paginas.balance === 80000 && accounts.dropi.balance === 80000, 'cada canal debe el precio del par que salió');
 

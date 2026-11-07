@@ -109,9 +109,9 @@ export function PrintPreview({ pairIds, onClose }: { pairIds: string[]; onClose:
                 <strong>CALZADO EVALOOK</strong>
                 <span>Par de inventario</span>
               </div>
+              <div className="shoe-label-number">{pair.qrCode}</div>
               <Barcode value={pair.qrCode} />
               <div className="shoe-label-copy">
-                <b>{pair.qrCode}</b>
                 <span>{pair.referenceCode} · Talla {pair.size}</span>
                 <span>{pair.name}</span>
                 <span>{pair.color} · {pair.line}</span>
