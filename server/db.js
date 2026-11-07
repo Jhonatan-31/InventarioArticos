@@ -82,6 +82,24 @@ function migratePaymentsChannels() {
   `);
 }
 
+/** Una sola vez: borra pares y movimientos, conserva referencias. */
+function wipeStockKeepRefsOnce() {
+  const key = 'wipe_stock_keep_refs_20261107';
+  const done = database.prepare(`SELECT value FROM meta WHERE key = ?`).get(key);
+  if (done) return;
+  const refs = Number(database.prepare(`SELECT COUNT(*) AS n FROM shoe_refs`).get().n);
+  const pairs = Number(database.prepare(`SELECT COUNT(*) AS n FROM pairs`).get().n);
+  database.exec(`
+    DELETE FROM incidents;
+    DELETE FROM movements;
+    DELETE FROM payments;
+    DELETE FROM pairs;
+  `);
+  database.prepare(`INSERT OR REPLACE INTO meta (key, value) VALUES ('next_qr', '1')`).run();
+  database.prepare(`INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)`).run(key, new Date().toISOString());
+  console.log(`Existencias borradas (${pairs} pares). Referencias conservadas: ${refs}. Consecutivo reiniciado en 00001.`);
+}
+
 const schema = `
 PRAGMA foreign_keys = ON;
 PRAGMA journal_mode = DELETE;
@@ -177,6 +195,7 @@ export function getDb() {
     WHERE size = ''
   `);
   database.prepare(`INSERT OR IGNORE INTO meta (key, value) VALUES ('next_qr', '1')`).run();
+  wipeStockKeepRefsOnce();
   return database;
 }
 
