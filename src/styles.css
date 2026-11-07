@@ -345,10 +345,16 @@ a { color: var(--cognac-deep); }
 .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .pill.inventario, .pill.entrada { color: var(--green); background: #e5f2ea; }
 .pill.salida, .pill.reimpresion { color: #5c534c; background: #efe8e0; }
-.pill.paginas { color: #1d4d34; background: #e5f2ea; }
-.pill.dropi { color: #5c3d78; background: #f3eaf8; }
-.pill.fabrica { color: #5a3a16; background: #f3e8d8; }
+.pill.paginas { color: #5b2d8e; background: #efe6f8; }
+.pill.dropi { color: #b85a12; background: #fde9d6; }
+.pill.fabrica { color: #1d4f8c; background: #e3eefc; }
 .accounts-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; width: 100%; }
+.account-card.paginas { border-color: #d7c4ef; box-shadow: inset 3px 0 0 #7a45b5; }
+.account-card.dropi { border-color: #f0c79a; box-shadow: inset 3px 0 0 #d97706; }
+.account-card.fabrica { border-color: #b7ccec; box-shadow: inset 3px 0 0 #2563ab; }
+.account-card.paginas .balance dd { color: #5b2d8e; }
+.account-card.dropi .balance dd { color: #b85a12; }
+.account-card.fabrica .balance dd { color: #1d4f8c; }
 .pill.prioridad, .pill.devolucion, .pill.novedad { color: var(--ox); background: #f8e7e4; }
 .pill.label-por_confirmar { color: #7a4b12; background: #f8efd8; }
 .pill.label-activa { color: var(--green); background: #e5f2ea; }
@@ -514,8 +520,15 @@ table.bodega tfoot td { position: sticky; bottom: 0; background: #f6efe6; font-w
 
 #barcode-reader { border: 0 !important; width: 100%; }
 #barcode-reader video { width: 100%; border-radius: 12px; display: block; }
-.scanner-page.dropi .scan-result.ok { background: #f3eaf8; }
-.scanner-page.paginas .mode-note { background: #e7f2eb; }
+.scanner-page.paginas .mode-note { background: #efe6f8; border-left: 3px solid #7a45b5; }
+.scanner-page.dropi .mode-note { background: #fde9d6; border-left: 3px solid #d97706; }
+.scanner-page.fabrica .mode-note { background: #e3eefc; border-left: 3px solid #2563ab; }
+.scanner-page.paginas .scan-result.ok { background: #efe6f8; }
+.scanner-page.dropi .scan-result.ok { background: #fde9d6; }
+.scanner-page.fabrica .scan-result.ok { background: #e3eefc; }
+.filter-ranges button.channel-paginas.active { background: #5b2d8e; border-color: #5b2d8e; }
+.filter-ranges button.channel-dropi.active { background: #b85a12; border-color: #b85a12; }
+.filter-ranges button.channel-fabrica.active { background: #1d4f8c; border-color: #1d4f8c; }
 
 .sheet-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; width: 100%; }
 .sheet-card { padding: 14px; }

@@ -105,7 +105,7 @@ export function Dashboard() {
               <button
                 key={item.key}
                 type="button"
-                className={scope === item.key ? 'active' : ''}
+                className={`${scope === item.key ? 'active' : ''}${item.key === 'paginas' || item.key === 'dropi' || item.key === 'fabrica' ? ` channel-${item.key}` : ''}`.trim()}
                 onClick={() => setScope(item.key)}
               >
                 {item.label}

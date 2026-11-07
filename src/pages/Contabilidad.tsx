@@ -7,7 +7,7 @@ import { PageHeader } from '../components/PageHeader';
 
 function AccountCard({ account }: { account: ChannelAccount }) {
   return (
-    <article className="panel account-card">
+    <article className={`panel account-card ${account.channel}`}>
       <header className="panel-head">
         <h2>{channelLabel[account.channel]}</h2>
         <span>{account.outNow} pares fuera</span>
