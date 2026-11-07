@@ -128,7 +128,7 @@ function writeTable(ws, columns, records, priorityOf) {
 const statusLabel = {
   inventario: 'En inventario',
   salida: 'Salió',
-  prioridad: 'Prioritario',
+  prioridad: 'Devolución',
 };
 
 const channelLabel = {

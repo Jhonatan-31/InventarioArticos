@@ -242,7 +242,11 @@ export function Inventory() {
                 <td className="mono">{item.qrCode}</td>
                 <td>{item.referenceCode}<small>{item.line}</small></td>
                 <td>{item.name}<small>{item.color} · Talla {item.size}</small></td>
-                <td><StatusPill status={item.status} channel={item.channel} /></td>
+                <td>
+                  {item.status === 'prioridad'
+                    ? <span className="pill devolucion">Devolución</span>
+                    : <StatusPill status={item.status} channel={item.channel} />}
+                </td>
                 <td><LabelPill state={item.labelState} /></td>
                 <td>{formatWhen(item.createdAt)}</td>
                 <td>{formatWhen(item.exitedAt)}</td>

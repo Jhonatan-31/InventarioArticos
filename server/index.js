@@ -151,10 +151,21 @@ app.get('/api/reports/excel', asyncRoute(async (_req, res) => {
 
 const dist = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'dist');
 if (fs.existsSync(dist)) {
-  app.use(express.static(dist));
+  app.use(express.static(dist, {
+    setHeaders(res, filePath) {
+      if (filePath.endsWith(`${path.sep}index.html`) || filePath.endsWith('/index.html')) {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+        return;
+      }
+      if (/\.[a-f0-9]{8,}\./i.test(filePath)) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      }
+    },
+  }));
   app.use((req, res, next) => {
     if (req.method !== 'GET' && req.method !== 'HEAD') return next();
     if (req.path.startsWith('/api')) return next();
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     res.sendFile(path.join(dist, 'index.html'));
   });
 }
