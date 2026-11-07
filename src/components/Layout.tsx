@@ -59,8 +59,14 @@ export function Layout() {
   const location = useLocation();
   const [open, setOpen] = useState(false);
   const [canLogout, setCanLogout] = useState(false);
-  const today = new Intl.DateTimeFormat('es-CO', {
+  const todayFull = new Intl.DateTimeFormat('es-CO', {
     dateStyle: 'full',
+    timeZone: 'America/Bogota',
+  }).format(new Date());
+  const todayShort = new Intl.DateTimeFormat('es-CO', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
     timeZone: 'America/Bogota',
   }).format(new Date());
 
@@ -120,7 +126,10 @@ export function Layout() {
           <button type="button" className="menu-btn" onClick={() => setOpen(true)} aria-label="Abrir menú">
             Menú
           </button>
-          <p>{today}</p>
+          <p className="topbar-date">
+            <span className="date-full">{todayFull}</span>
+            <span className="date-short">{todayShort}</span>
+          </p>
           <div className="topbar-actions">
             <button type="button" className="btn danger" onClick={() => openDamage('')}>
               Código dañado
