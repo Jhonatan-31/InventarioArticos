@@ -199,7 +199,7 @@ export function Inventory() {
           <span className="filter-caption">Filtros</span>
           <select value={status} aria-label="Estado" onChange={(event) => { setStatus(event.target.value); setPage(1); }}>
             <option value="existencia">En existencia</option>
-            <option value="prioridad">Prioritarios</option>
+            <option value="prioridad">Devoluciones</option>
             <option value="inventario">Solo normales</option>
             <option value="paginas">Salieron a páginas</option>
             <option value="dropi">Salieron a Dropi</option>

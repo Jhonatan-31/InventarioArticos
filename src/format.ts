@@ -33,7 +33,7 @@ export function formatWhen(iso?: string | null) {
 export const statusLabel: Record<string, string> = {
   inventario: 'En inventario',
   salida: 'Salió',
-  prioridad: 'Prioritario',
+  prioridad: 'Devolución',
 };
 
 export const movementLabel: Record<string, string> = {

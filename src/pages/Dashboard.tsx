@@ -122,7 +122,7 @@ export function Dashboard() {
               <small>Incluye prioritarios</small>
             </article>
             <article className={`kpi${scope === 'todos' && data.totals.priority > 0 ? ' accent' : ''}`}>
-              <span>Prioritarios</span>
+              <span>Devoluciones</span>
               <strong>{data.totals.priority}</strong>
               <small>Devueltos, salen primero</small>
             </article>
@@ -221,7 +221,7 @@ export function Dashboard() {
                 <h2>Existencia por referencia</h2>
                 <div className="legend">
                   <span><i className="swatch stock" /> Normal</span>
-                  <span><i className="swatch priority" /> Prioritario</span>
+                  <span><i className="swatch priority" /> Devolución</span>
                 </div>
               </header>
               {ranked.length === 0 ? (
@@ -284,7 +284,7 @@ export function Dashboard() {
                     <th>Referencia</th>
                     <th>Modelo</th>
                     <th>Existencia</th>
-                    <th>Prioritarios</th>
+                    <th>Devoluciones</th>
                     <th>Salidas</th>
                     <th>Devoluciones</th>
                   </tr>

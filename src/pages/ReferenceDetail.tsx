@@ -166,7 +166,7 @@ export function ReferenceDetail() {
             <small>Incluye prioritarios</small>
           </article>
           <article className="kpi accent">
-            <span>Prioritarios</span>
+            <span>Devoluciones</span>
             <strong>{reference.priority}</strong>
             <small>Salen primero</small>
           </article>
