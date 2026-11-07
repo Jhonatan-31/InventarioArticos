@@ -1,16 +1,27 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getBodega } from '../api';
-import type { BodegaData } from '../types';
+import { getBodega, updateReference } from '../api';
+import type { BodegaData, BodegaRow } from '../types';
 import { formatDay, formatMoney } from '../format';
 import { useUi } from '../ui';
 import { PageHeader } from '../components/PageHeader';
+import { Modal } from '../components/Modal';
+import {
+  emptyReferenceForm,
+  ReferenceFields,
+  referenceToForm,
+  referenceToInput,
+  type ReferenceFormState,
+} from '../components/ReferenceForm';
 
 export function Bodega() {
-  const { version } = useUi();
+  const { version, bump, notify } = useUi();
   const [data, setData] = useState<BodegaData | null>(null);
   const [query, setQuery] = useState('');
   const [error, setError] = useState('');
+  const [editing, setEditing] = useState<BodegaRow | null>(null);
+  const [editForm, setEditForm] = useState<ReferenceFormState>(emptyReferenceForm);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     let cancel = false;
@@ -31,6 +42,22 @@ export function Bodega() {
   }, [data, query]);
 
   const sizes = data?.sizes || [];
+
+  async function saveEdit(event: React.FormEvent) {
+    event.preventDefault();
+    if (!editing) return;
+    setBusy(true);
+    try {
+      await updateReference(editing.id, referenceToInput(editForm));
+      setEditing(null);
+      bump();
+      notify('Referencia actualizada.', 'ok');
+    } catch (caught) {
+      notify(caught instanceof Error ? caught.message : 'No se pudo actualizar.', 'err');
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <div className="stack page">
@@ -111,7 +138,21 @@ export function Bodega() {
                       {row.priorityBySize[size] > 0 && <small className="prio-dot" title="Prioritario">{row.priorityBySize[size]}</small>}
                     </td>
                   ))}
-                  <td><Link className="btn small" to={`/entrada?referencia=${row.id}`}>Ingresar</Link></td>
+                  <td>
+                    <div className="actions">
+                      <button
+                        type="button"
+                        className="btn small ghost"
+                        onClick={() => {
+                          setEditing(row);
+                          setEditForm(referenceToForm(row));
+                        }}
+                      >
+                        Editar
+                      </button>
+                      <Link className="btn small" to={`/entrada?referencia=${row.id}`}>Ingresar</Link>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -132,6 +173,17 @@ export function Bodega() {
           </table>
         </div>
       </section>
+      {editing && (
+        <Modal title={`Editar ${editing.code}`} onClose={() => setEditing(null)}>
+          <form className="stack" onSubmit={saveEdit}>
+            <ReferenceFields value={editForm} onChange={setEditForm} />
+            <div className="form-actions">
+              <button type="button" className="btn ghost" onClick={() => setEditing(null)}>Cancelar</button>
+              <button className="btn primary" disabled={busy} type="submit">{busy ? 'Guardando…' : 'Guardar'}</button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 }
