@@ -99,7 +99,7 @@ export function Dashboard() {
               {ranked.length === 0 ? (
                 <div className="empty">
                   <strong>Todavía no hay referencias</strong>
-                  <p>Crea la primera y registra los pares. El código inicial será 00001.</p>
+                  <p>Crea la primera referencia y luego ingresa los pares por talla. El código inicial será 00001.</p>
                   <Link className="btn primary" to="/referencias">Crear referencia</Link>
                 </div>
               ) : (

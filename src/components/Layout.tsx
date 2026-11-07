@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { getSession, logout } from '../api';
 import { useUi } from '../ui';
 import { IconAlert, IconBoxes, IconFile, IconPanel, IconPrint, IconScan, IconTag } from './Icons';
 
@@ -57,6 +58,7 @@ export function Layout() {
   const { nextQr, openDamage } = useUi();
   const location = useLocation();
   const [open, setOpen] = useState(false);
+  const [canLogout, setCanLogout] = useState(false);
   const today = new Intl.DateTimeFormat('es-CO', {
     dateStyle: 'full',
     timeZone: 'America/Bogota',
@@ -66,6 +68,17 @@ export function Layout() {
   useEffect(() => {
     document.title = `${names[location.pathname] || 'Inventario'} · Calzado Evalook`;
   }, [location.pathname]);
+  useEffect(() => {
+    let alive = true;
+    getSession()
+      .then((session) => {
+        if (alive) setCanLogout(Boolean(session.required));
+      })
+      .catch(() => {
+        if (alive) setCanLogout(false);
+      });
+    return () => { alive = false; };
+  }, []);
 
   return (
     <div className="shell">
@@ -108,9 +121,26 @@ export function Layout() {
             Menú
           </button>
           <p>{today}</p>
-          <button type="button" className="btn danger" onClick={() => openDamage('')}>
-            Código dañado
-          </button>
+          <div className="topbar-actions">
+            <button type="button" className="btn danger" onClick={() => openDamage('')}>
+              Código dañado
+            </button>
+            {canLogout && (
+              <button
+                type="button"
+                className="btn ghost"
+                onClick={async () => {
+                  try {
+                    await logout();
+                  } finally {
+                    window.dispatchEvent(new CustomEvent('evalook:auth'));
+                  }
+                }}
+              >
+                Salir
+              </button>
+            )}
+          </div>
         </header>
         <div className="main-inner">
           <Outlet />

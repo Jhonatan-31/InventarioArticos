@@ -39,6 +39,9 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
       throw new Error('El servidor respondió de forma inesperada.');
     }
   }
+  if (response.status === 401) {
+    window.dispatchEvent(new CustomEvent('evalook:auth'));
+  }
   if (!response.ok) throw new Error(data.error || 'No se pudo completar la operación.');
   return data as T;
 }
@@ -52,6 +55,10 @@ export function login(password: string) {
     method: 'POST',
     body: JSON.stringify({ password }),
   });
+}
+
+export function logout() {
+  return request<{ ok: boolean }>('/api/logout', { method: 'POST' });
 }
 
 export const getDashboard = () => request<DashboardData>('/api/dashboard');

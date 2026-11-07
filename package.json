@@ -11,7 +11,6 @@
     "server": "node server/index.js",
     "check": "node server/selfcheck.js",
     "build": "vite build",
-    "postinstall": "vite build",
     "start": "node server.cjs"
   },
   "dependencies": {

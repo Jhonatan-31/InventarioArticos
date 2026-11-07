@@ -1,0 +1,12 @@
+Calzado Evalook en Hostinger
+=============================
+
+1. Sitio Node.js, rama main, Node 24.x
+2. Archivo de entrada: server.cjs
+3. Comando de build: build
+4. Carpeta de salida: vacía
+5. Variable EVALOOK_PASSWORD = clave del almacén
+6. Opcional: EVALOOK_DATA = ruta persistente (si no, usa evalook-data junto al dominio)
+
+No uses el botón Conectar de MySQL. El inventario guarda todo en SQLite.
+Tras cada Redistribuir, limpia caché si la pantalla se ve vieja.

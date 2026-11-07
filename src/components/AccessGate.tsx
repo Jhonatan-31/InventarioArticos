@@ -12,21 +12,33 @@ export function AccessGate({ children }: { children: ReactNode }) {
     const controller = new AbortController();
     const timer = window.setTimeout(() => controller.abort(), 2500);
 
+    const apply = (session: { required: boolean; ok: boolean }) => {
+      if (!alive) return;
+      if (!session.required || session.ok) setState('open');
+      else setState('locked');
+    };
+
     getSession(controller.signal)
-      .then((session) => {
-        if (!alive) return;
-        if (!session.required || session.ok) setState('open');
-        else setState('locked');
-      })
+      .then(apply)
       .catch(() => {
         if (alive) setState('locked');
       })
       .finally(() => window.clearTimeout(timer));
 
+    const onAuth = () => {
+      if (alive) {
+        setPassword('');
+        setError('La sesión se cerró. Entra otra vez.');
+        setState('locked');
+      }
+    };
+    window.addEventListener('evalook:auth', onAuth);
+
     return () => {
       alive = false;
       controller.abort();
       window.clearTimeout(timer);
+      window.removeEventListener('evalook:auth', onAuth);
     };
   }, []);
 
@@ -55,7 +67,7 @@ export function AccessGate({ children }: { children: ReactNode }) {
           {state === 'checking' ? 'Comprobando acceso…' : 'Entra con la clave del almacén.'}
         </p>
         <label className="field">
-          Clave
+          <span>Clave</span>
           <input
             autoFocus
             type="password"

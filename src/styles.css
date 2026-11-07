@@ -64,10 +64,15 @@ a { color: var(--cognac-deep); }
 
 .main { min-width: 0; }
 .topbar {
-  display: flex; justify-content: flex-end; align-items: center; gap: 16px;
-  padding: 16px 28px; color: var(--muted); font-size: 14px;
+  display: flex; justify-content: flex-end; align-items: center; gap: 12px;
+  padding: 16px 28px; color: var(--muted); font-size: 14px; flex-wrap: wrap;
 }
-.topbar p { margin-right: auto; }
+.topbar p {
+  margin-right: auto;
+  line-height: 1.35;
+  min-width: 0;
+}
+.topbar-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .main-inner { padding: 0 28px 40px; max-width: 1560px; }
 .menu-btn, .scrim { display: none; }
 
@@ -97,7 +102,7 @@ a { color: var(--cognac-deep); }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .icon-btn { border: 0; background: transparent; font-size: 28px; line-height: 1; padding: 0 4px; }
 
-.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
 .kpi, .panel, .sheet-card {
   background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow);
 }
@@ -150,14 +155,23 @@ a { color: var(--cognac-deep); }
 .queue { display: flex; flex-direction: column; gap: 8px; }
 .queue-item, .pair-mini {
   display: flex; gap: 10px; align-items: center; justify-content: space-between;
-  padding: 10px 12px; background: var(--cream); border-radius: 12px;
+  padding: 10px 12px; background: var(--cream); border-radius: 12px; flex-wrap: wrap;
 }
+.queue-item > div { min-width: 0; flex: 1 1 140px; }
 .queue-item strong, .mono { font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
 .pair-mini { flex-direction: column; align-items: flex-start; }
 
 .table-wrap { overflow: auto; border: 1px solid var(--line); border-radius: 12px; }
 .data { width: 100%; border-collapse: collapse; min-width: 760px; background: white; }
-.data th, .data td { text-align: left; padding: 11px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.data th, .data td {
+  text-align: left; padding: 11px 12px; border-bottom: 1px solid var(--line);
+  vertical-align: top; line-height: 1.4;
+}
+.data td small {
+  display: block;
+  margin-top: 4px;
+  line-height: 1.35;
+}
 .data th { font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); background: #f6f0e8; position: sticky; top: 0; }
 .data tr.priority td { background: #fbf3f1; }
 .data tr.priority td:first-child { box-shadow: inset 3px 0 0 var(--ox); }
@@ -191,9 +205,11 @@ a { color: var(--cognac-deep); }
 .pill.label-reimpresion { color: var(--ox); background: #f8e7e4; }
 
 .callout {
-  display: flex; justify-content: space-between; gap: 12px; align-items: center;
+  display: flex; justify-content: space-between; gap: 12px; align-items: flex-start;
   padding: 14px 16px; border-radius: 14px; background: #f8efe4; border: 1px solid #eadccb;
+  flex-wrap: wrap;
 }
+.callout > * { min-width: 0; }
 .callout.warn { background: #f8ebe8; border-color: #efd0cb; display: block; }
 .callout ul { margin: 8px 0 0; padding-left: 18px; }
 .empty {
@@ -254,7 +270,11 @@ a { color: var(--cognac-deep); }
 .scan-result strong { font-family: var(--serif); font-size: 42px; line-height: 1; }
 .scan-result.err { background: #f8e7e4; }
 .camera-box { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
-.kpi .money-kpi { font-size: 26px; line-height: 1.1; }
+.kpi .money-kpi {
+  font-size: clamp(18px, 2.4vw, 26px);
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
 .money { font-variant-numeric: tabular-nums; color: var(--cognac-deep); font-weight: 600; }
 .sum { color: var(--green); font-weight: 700; }
 .prio { color: var(--ox); font-weight: 700; }
@@ -313,6 +333,11 @@ table.bodega tfoot td { position: sticky; bottom: 0; background: #f6efe6; font-w
 .shoe-label-copy b { font-family: var(--serif); font-size: 28px; line-height: 1; }
 .shoe-label-copy span, .shoe-label-copy small { font-size: 13px; }
 
+@media (max-width: 1100px) {
+  .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .split { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 980px) {
   .shell { grid-template-columns: 1fr; }
   .sidebar { position: fixed; z-index: 35; transform: translateX(-105%); width: 270px; transition: transform 0.2s ease; }
@@ -325,6 +350,7 @@ table.bodega tfoot td { position: sticky; bottom: 0; background: #f6efe6; font-w
   .page-header h1 { font-size: 34px; }
   .main-inner, .topbar { padding-left: 16px; padding-right: 16px; }
   .bar-row { grid-template-columns: 1fr; }
+  .actions { flex-wrap: wrap; white-space: normal; }
 }
 
 .gate {
