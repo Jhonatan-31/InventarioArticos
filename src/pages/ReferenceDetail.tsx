@@ -22,7 +22,7 @@ export function ReferenceDetail() {
   const [items, setItems] = useState<Pair[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [view, setView] = useState<'existencia' | 'salida' | 'todos'>('existencia');
+  const [view, setView] = useState<'existencia' | 'salida' | 'todos' | 'paginas' | 'dropi'>('existencia');
   const [size, setSize] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -81,6 +81,7 @@ export function ReferenceDetail() {
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(total, page * pageSize);
   const allVisible = items.length > 0 && items.every((item) => selected.includes(item.id));
+  const outView = view === 'salida' || view === 'paginas' || view === 'dropi';
   const printable = items.filter((item) => item.status !== 'salida' && selected.includes(item.id));
 
   function toggle(pairId: string) {
@@ -235,10 +236,16 @@ export function ReferenceDetail() {
             value={id}
             aria-label="Referencia"
             onChange={(event) => {
-              navigate(`/referencias/${event.target.value}`);
+              const next = event.target.value;
+              if (!next) {
+                navigate('/pares');
+                return;
+              }
+              navigate(`/referencias/${next}`);
               setPage(1);
             }}
           >
+            <option value="">Todos</option>
             {refs.map((item) => (
               <option key={item.id} value={item.id}>{item.code} · {item.name}</option>
             ))}
@@ -247,12 +254,14 @@ export function ReferenceDetail() {
             value={view}
             aria-label="Estado"
             onChange={(event) => {
-              setView(event.target.value as 'existencia' | 'salida' | 'todos');
+              setView(event.target.value as 'existencia' | 'salida' | 'todos' | 'paginas' | 'dropi');
               setPage(1);
             }}
           >
             <option value="existencia">En bodega</option>
             <option value="salida">Ya salieron</option>
+            <option value="paginas">Salieron a páginas</option>
+            <option value="dropi">Salieron a Dropi</option>
             <option value="todos">Todos los códigos</option>
           </select>
           <select
@@ -283,7 +292,7 @@ export function ReferenceDetail() {
                   checked={allVisible}
                   onChange={togglePage}
                   aria-label="Seleccionar página"
-                  disabled={view === 'salida'}
+                  disabled={outView}
                 />
               </th>
               <th>Código</th>
@@ -301,7 +310,11 @@ export function ReferenceDetail() {
                 <td colSpan={8}>
                   {view === 'existencia'
                     ? 'No hay pares en bodega con estos filtros.'
-                    : 'No hay códigos con este filtro.'}
+                    : view === 'paginas'
+                      ? 'No hay salidas a páginas con estos filtros.'
+                      : view === 'dropi'
+                        ? 'No hay salidas a Dropi con estos filtros.'
+                        : 'No hay códigos con este filtro.'}
                 </td>
               </tr>
             )}

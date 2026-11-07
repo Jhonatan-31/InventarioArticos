@@ -169,6 +169,11 @@ a { color: var(--cognac-deep); }
   min-width: 0;
   overflow-wrap: anywhere;
 }
+.panel-head .lede {
+  margin-top: 4px;
+  font-size: 14px;
+  max-width: 520px;
+}
 .legend {
   display: flex; gap: 12px; flex-wrap: wrap;
   color: var(--muted); font-size: 13px; line-height: 1.3;

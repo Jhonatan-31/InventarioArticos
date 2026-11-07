@@ -1,15 +1,27 @@
-import { useEffect, useState } from 'react';
-import { getDashboard } from '../api';
-import type { DashboardData } from '../types';
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { getDashboard, getPairs } from '../api';
+import type { DashboardData, Pair } from '../types';
 import { formatMoney, formatWhen } from '../format';
 import { useUi } from '../ui';
 import { PageHeader } from '../components/PageHeader';
 import { MovementPill, StatusPill } from '../components/StatusPill';
-import { Link } from 'react-router-dom';
+
+type Scope = 'todos' | 'bodega' | 'paginas' | 'dropi';
+
+const SCOPE_OPTIONS: Array<{ key: Scope; label: string }> = [
+  { key: 'todos', label: 'Todos' },
+  { key: 'bodega', label: 'Bodega' },
+  { key: 'paginas', label: 'Páginas' },
+  { key: 'dropi', label: 'Dropi' },
+];
 
 export function Dashboard() {
-  const { version, openDamage } = useUi();
+  const { version } = useUi();
   const [data, setData] = useState<DashboardData | null>(null);
+  const [pairs, setPairs] = useState<Pair[]>([]);
+  const [pairsTotal, setPairsTotal] = useState(0);
+  const [scope, setScope] = useState<Scope>('todos');
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -22,8 +34,55 @@ export function Dashboard() {
     return () => { cancel = true; };
   }, [version]);
 
-  const ranked = [...(data?.byReference || [])].sort((a, b) => b.inStock - a.inStock || a.code.localeCompare(b.code)).slice(0, 8);
+  useEffect(() => {
+    let cancel = false;
+    const status = scope === 'todos' ? 'salida' : scope === 'bodega' ? 'existencia' : scope;
+    getPairs({ status, page: '1', pageSize: '25' }).then((result) => {
+      if (cancel) return;
+      setPairs(result.items);
+      setPairsTotal(result.total);
+    }).catch(() => {
+      if (!cancel) {
+        setPairs([]);
+        setPairsTotal(0);
+      }
+    });
+    return () => { cancel = true; };
+  }, [version, scope]);
+
+  const ranked = useMemo(() => (
+    [...(data?.byReference || [])].sort((a, b) => b.inStock - a.inStock || a.code.localeCompare(b.code)).slice(0, 8)
+  ), [data]);
   const max = Math.max(1, ...ranked.map((item) => item.inStock));
+
+  const movements = useMemo(() => {
+    const rows = data?.recentMovements || [];
+    if (scope === 'todos') return rows;
+    if (scope === 'bodega') return rows.filter((move) => move.type === 'entrada' || move.type === 'devolucion');
+    if (scope === 'paginas') return rows.filter((move) => move.type === 'salida' && move.channel === 'paginas');
+    return rows.filter((move) => move.type === 'salida' && move.channel === 'dropi');
+  }, [data, scope]);
+
+  const scopeTitle = {
+    todos: 'Lo que ha salido',
+    bodega: 'Lo que hay en bodega',
+    paginas: 'Salidas a páginas',
+    dropi: 'Salidas a Dropi',
+  }[scope];
+
+  const scopeHint = {
+    todos: 'Últimas salidas de bodega, sin importar el canal.',
+    bodega: 'Pares que siguen en inventario, incluidos prioritarios.',
+    paginas: 'Pares que salieron por el canal de páginas.',
+    dropi: 'Pares que salieron por Dropi.',
+  }[scope];
+
+  const scopeLink = {
+    todos: '/pares?estado=salida',
+    bodega: '/pares?estado=existencia',
+    paginas: '/pares?estado=paginas',
+    dropi: '/pares?estado=dropi',
+  }[scope];
 
   return (
     <div className="stack page">
@@ -31,32 +90,51 @@ export function Dashboard() {
         eyebrow="Calzado Evalook"
         title="Panel de inventario"
         text="Existencia por talla, salidas separadas para páginas y Dropi, y la plata que queda en bodega o por cobrar."
-        actions={<button type="button" className="btn danger" onClick={() => openDamage('')}>Código dañado</button>}
       />
+
+      <div className="panel filter-panel">
+        <div className="inventory-toolbar">
+          <span className="filter-caption">Ver</span>
+          <div className="filter-ranges" role="tablist" aria-label="Filtro del panel">
+            {SCOPE_OPTIONS.map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                className={scope === item.key ? 'active' : ''}
+                onClick={() => setScope(item.key)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+          <Link className="btn ghost" to={scopeLink}>Ver listado</Link>
+        </div>
+      </div>
+
       {error && <p className="form-error">{error}</p>}
       {!data && !error && <p className="muted">Cargando el panel…</p>}
       {data && (
         <>
           <section className="kpi-grid">
-            <article className="kpi">
+            <article className={`kpi${scope === 'bodega' ? ' accent' : ''}`}>
               <span>En existencia</span>
               <strong>{data.totals.inStock}</strong>
               <small>Incluye prioritarios</small>
             </article>
-            <article className="kpi accent">
+            <article className={`kpi${scope === 'todos' && data.totals.priority > 0 ? ' accent' : ''}`}>
               <span>Prioritarios</span>
               <strong>{data.totals.priority}</strong>
               <small>Devueltos, salen primero</small>
             </article>
-            <article className="kpi">
-              <span>Salieron</span>
-              <strong>{data.totals.out}</strong>
-              <small>Fuera de inventario</small>
+            <article className={`kpi${scope === 'paginas' ? ' accent' : ''}`}>
+              <span>Salieron a páginas</span>
+              <strong>{data.totals.outPaginas}</strong>
+              <small>Saldo {formatMoney(data.totals.paginasBalance)}</small>
             </article>
-            <article className="kpi">
-              <span>Referencias</span>
-              <strong>{data.totals.references}</strong>
-              <small>Siguiente código {data.nextQr}</small>
+            <article className={`kpi${scope === 'dropi' ? ' accent' : ''}`}>
+              <span>Salieron a Dropi</span>
+              <strong>{data.totals.outDropi}</strong>
+              <small>Saldo {formatMoney(data.totals.dropiBalance)}</small>
             </article>
           </section>
           <section className="kpi-grid">
@@ -66,14 +144,14 @@ export function Dashboard() {
               <small>Precio por existencia</small>
             </article>
             <article className="kpi">
-              <span>Saldo páginas</span>
-              <strong className="money-kpi">{formatMoney(data.totals.paginasBalance)}</strong>
-              <small>{data.totals.outPaginas} pares fuera</small>
+              <span>Salieron en total</span>
+              <strong>{data.totals.out}</strong>
+              <small>Fuera de inventario</small>
             </article>
             <article className="kpi">
-              <span>Saldo Dropi</span>
-              <strong className="money-kpi">{formatMoney(data.totals.dropiBalance)}</strong>
-              <small>{data.totals.outDropi} pares fuera</small>
+              <span>Referencias</span>
+              <strong>{data.totals.references}</strong>
+              <small>Siguiente código {data.nextQr}</small>
             </article>
             <article className="kpi accent">
               <span>Por cobrar</span>
@@ -87,6 +165,56 @@ export function Dashboard() {
             <div><span>Devoluciones hoy</span><b>{data.totals.returnsToday}</b></div>
             <div><span>Novedades abiertas</span><b>{data.totals.incidentsOpen}</b></div>
           </section>
+
+          <article className="panel">
+            <header className="panel-head">
+              <div>
+                <h2>{scopeTitle}</h2>
+                <p className="lede">{scopeHint}</p>
+              </div>
+              <Link to={scopeLink}>Ver todos ({pairsTotal})</Link>
+            </header>
+            <div className="table-wrap">
+              <table className="data">
+                <thead>
+                  <tr>
+                    <th>Código</th>
+                    <th>Referencia</th>
+                    <th>Detalle</th>
+                    <th>Estado</th>
+                    <th>Ingreso</th>
+                    <th>Salida</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pairs.length === 0 && (
+                    <tr>
+                      <td colSpan={6}>
+                        {scope === 'bodega'
+                          ? 'No hay pares en bodega.'
+                          : scope === 'paginas'
+                            ? 'Todavía no hay salidas a páginas.'
+                            : scope === 'dropi'
+                              ? 'Todavía no hay salidas a Dropi.'
+                              : 'Todavía no hay salidas registradas.'}
+                      </td>
+                    </tr>
+                  )}
+                  {pairs.map((item) => (
+                    <tr key={item.id} className={item.status === 'prioridad' ? 'priority' : ''}>
+                      <td className="mono">{item.qrCode}</td>
+                      <td>{item.referenceCode}</td>
+                      <td>{item.name}<small>{item.color} · Talla {item.size}</small></td>
+                      <td><StatusPill status={item.status} channel={item.channel} /></td>
+                      <td>{formatWhen(item.createdAt)}</td>
+                      <td>{formatWhen(item.exitedAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </article>
+
           <section className="split">
             <article className="panel">
               <header className="panel-head">
@@ -196,10 +324,10 @@ export function Dashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.recentMovements.length === 0 && (
-                    <tr><td colSpan={5}>Aún no hay movimientos.</td></tr>
+                  {movements.length === 0 && (
+                    <tr><td colSpan={5}>No hay movimientos con este filtro.</td></tr>
                   )}
-                  {data.recentMovements.map((move) => (
+                  {movements.map((move) => (
                     <tr key={move.id}>
                       <td>{formatWhen(move.createdAt)}</td>
                       <td><MovementPill type={move.type} /></td>
