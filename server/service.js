@@ -100,8 +100,16 @@ function pesos(value) {
   }).format(Number(value) || 0);
 }
 
+const CHANNELS = ['paginas', 'dropi', 'fabrica'];
+
 function channelName(channel) {
-  return channel === 'dropi' ? 'Dropi' : 'páginas';
+  if (channel === 'dropi') return 'Dropi';
+  if (channel === 'fabrica') return 'fábrica';
+  return 'páginas';
+}
+
+function isChannel(channel) {
+  return CHANNELS.includes(channel);
 }
 
 function stockLeft(referenceId, size) {
@@ -354,6 +362,7 @@ function accountingData() {
   return {
     paginas: channelAccount('paginas'),
     dropi: channelAccount('dropi'),
+    fabrica: channelAccount('fabrica'),
     payments: listPayments(200),
   };
 }
@@ -386,6 +395,7 @@ function totals() {
     out: Number(pairs.out_count),
     outPaginas: Number(db.prepare(`SELECT COUNT(*) AS n FROM pairs WHERE status = 'salida' AND channel = 'paginas'`).get().n),
     outDropi: Number(db.prepare(`SELECT COUNT(*) AS n FROM pairs WHERE status = 'salida' AND channel = 'dropi'`).get().n),
+    outFabrica: Number(db.prepare(`SELECT COUNT(*) AS n FROM pairs WHERE status = 'salida' AND channel = 'fabrica'`).get().n),
     warehouseValue: Number(db.prepare(`
       SELECT COALESCE(SUM(r.price), 0) AS value
       FROM pairs p JOIN shoe_refs r ON r.id = p.reference_id
@@ -445,8 +455,10 @@ export const api = {
         ...stats,
         paginasBalance: accounts.paginas.balance,
         dropiBalance: accounts.dropi.balance,
+        fabricaBalance: accounts.fabrica.balance,
         paginasOwed: accounts.paginas.owed,
         dropiOwed: accounts.dropi.owed,
+        fabricaOwed: accounts.fabrica.owed,
       },
       nextQr: nextQr(),
       byReference: listRefs(),
@@ -610,6 +622,7 @@ export const api = {
     if (status === 'existencia') where.push(`p.status IN ('inventario', 'prioridad')`);
     else if (status === 'paginas') where.push(`p.status = 'salida' AND p.channel = 'paginas'`);
     else if (status === 'dropi') where.push(`p.status = 'salida' AND p.channel = 'dropi'`);
+    else if (status === 'fabrica') where.push(`p.status = 'salida' AND p.channel = 'fabrica'`);
     else if (status !== 'todos') {
       if (!['inventario', 'salida', 'prioridad'].includes(status)) fail(400, 'Estado inválido.');
       where.push('p.status = ?');
@@ -676,8 +689,8 @@ export const api = {
   },
 
   scan(code, mode, channel) {
-    if (mode === 'salida' && !['paginas', 'dropi'].includes(channel)) {
-      fail(400, 'Indica si la salida es para páginas o para Dropi.');
+    if (mode === 'salida' && !isChannel(channel)) {
+      fail(400, 'Indica si la salida es para páginas, Dropi o fábrica.');
     }
     if (!['salida', 'devolucion'].includes(mode)) fail(400, 'El modo de escaneo no es válido.');
     return transaction(() => {
@@ -846,7 +859,12 @@ export const api = {
     const movementCount = Number(db.prepare(`SELECT COUNT(*) AS n FROM movements`).get().n);
     const accounts = accountingData();
     return {
-      totals: { ...stats, paginasBalance: accounts.paginas.balance, dropiBalance: accounts.dropi.balance },
+      totals: {
+        ...stats,
+        paginasBalance: accounts.paginas.balance,
+        dropiBalance: accounts.dropi.balance,
+        fabricaBalance: accounts.fabrica.balance,
+      },
       nextQr: nextQr(),
       refs: listRefs(),
       bodega: bodegaGrid(),
@@ -870,7 +888,7 @@ export const api = {
   },
 
   addPayment(channel, amount, note) {
-    if (!['paginas', 'dropi'].includes(channel)) fail(400, 'El abono es para páginas o para Dropi.');
+    if (!isChannel(channel)) fail(400, 'El abono es para páginas, Dropi o fábrica.');
     const value = Number(amount);
     if (!Number.isInteger(value) || value < 1 || value > 100000000) {
       fail(400, 'El abono debe ser un entero en pesos, mayor que cero.');

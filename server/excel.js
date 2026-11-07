@@ -134,11 +134,13 @@ const statusLabel = {
 const channelLabel = {
   paginas: 'Páginas',
   dropi: 'Dropi',
+  fabrica: 'Fábrica',
 };
 
 function channelOf(row) {
   if (row.status === 'salida' && row.channel === 'paginas') return 'Salió a páginas';
   if (row.status === 'salida' && row.channel === 'dropi') return 'Salió a Dropi';
+  if (row.status === 'salida' && row.channel === 'fabrica') return 'Salió a fábrica';
   return statusLabel[row.status] || row.status;
 }
 
@@ -195,6 +197,7 @@ export async function buildWorkbook(data) {
     ['Valor en bodega', data.totals.warehouseValue],
     ['Saldo páginas', data.totals.paginasBalance],
     ['Saldo Dropi', data.totals.dropiBalance],
+    ['Saldo fábrica', data.totals.fabricaBalance],
     ['Siguiente código disponible', data.nextQr],
   ];
 
@@ -374,8 +377,8 @@ export async function buildWorkbook(data) {
     { header: 'Abonos', width: 16, align: 'right', value: (row) => row.paid },
     { header: 'Saldo', width: 16, align: 'right', value: (row) => row.balance },
   ];
-  setupSheet(accounts, 'Lo que se debe por páginas y por Dropi', accountColumns.length);
-  writeTable(accounts, accountColumns, [data.accounting.paginas, data.accounting.dropi], () => false);
+  setupSheet(accounts, 'Lo que se debe por páginas, Dropi y fábrica', accountColumns.length);
+  writeTable(accounts, accountColumns, [data.accounting.paginas, data.accounting.dropi, data.accounting.fabrica], () => false);
 
   const payments = workbook.addWorksheet('Abonos', { properties: { defaultRowHeight: 18 } });
   const paymentColumns = [
@@ -384,7 +387,7 @@ export async function buildWorkbook(data) {
     { header: 'Abono', width: 16, align: 'right', value: (row) => row.amount },
     { header: 'Nota', width: 48, value: (row) => row.note },
   ];
-  setupSheet(payments, 'Abonos registrados a páginas y a Dropi', paymentColumns.length);
+  setupSheet(payments, 'Abonos registrados a páginas, Dropi y fábrica', paymentColumns.length);
   writeTable(payments, paymentColumns, data.accounting.payments, () => false);
 
   workbook.views = [{ activeTab: 0 }];

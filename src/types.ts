@@ -1,6 +1,6 @@
 export type PairStatus = 'inventario' | 'salida' | 'prioridad';
 export type LabelState = 'por_confirmar' | 'activa' | 'reimpresion';
-export type Channel = 'paginas' | 'dropi';
+export type Channel = 'paginas' | 'dropi' | 'fabrica';
 
 export interface Reference {
   id: string;
@@ -96,6 +96,7 @@ export interface DashboardTotals {
   out: number;
   outPaginas: number;
   outDropi: number;
+  outFabrica: number;
   warehouseValue: number;
   incidentsOpen: number;
   entriesToday: number;
@@ -103,8 +104,10 @@ export interface DashboardTotals {
   returnsToday: number;
   paginasBalance: number;
   dropiBalance: number;
+  fabricaBalance: number;
   paginasOwed: number;
   dropiOwed: number;
+  fabricaOwed: number;
 }
 
 export interface DashboardData {
@@ -177,5 +180,6 @@ export interface Payment {
 export interface AccountingData {
   paginas: ChannelAccount;
   dropi: ChannelAccount;
+  fabrica: ChannelAccount;
   payments: Payment[];
 }

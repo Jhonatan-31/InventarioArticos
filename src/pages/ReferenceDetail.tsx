@@ -22,7 +22,7 @@ export function ReferenceDetail() {
   const [items, setItems] = useState<Pair[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [view, setView] = useState<'existencia' | 'salida' | 'todos' | 'paginas' | 'dropi'>('existencia');
+  const [view, setView] = useState<'existencia' | 'salida' | 'todos' | 'paginas' | 'dropi' | 'fabrica'>('existencia');
   const [size, setSize] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -81,7 +81,7 @@ export function ReferenceDetail() {
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(total, page * pageSize);
   const allVisible = items.length > 0 && items.every((item) => selected.includes(item.id));
-  const outView = view === 'salida' || view === 'paginas' || view === 'dropi';
+  const outView = view === 'salida' || view === 'paginas' || view === 'dropi' || view === 'fabrica';
   const printable = items.filter((item) => item.status !== 'salida' && selected.includes(item.id));
 
   function toggle(pairId: string) {
@@ -254,7 +254,7 @@ export function ReferenceDetail() {
             value={view}
             aria-label="Estado"
             onChange={(event) => {
-              setView(event.target.value as 'existencia' | 'salida' | 'todos' | 'paginas' | 'dropi');
+              setView(event.target.value as 'existencia' | 'salida' | 'todos' | 'paginas' | 'dropi' | 'fabrica');
               setPage(1);
             }}
           >
@@ -262,6 +262,7 @@ export function ReferenceDetail() {
             <option value="salida">Ya salieron</option>
             <option value="paginas">Salieron a páginas</option>
             <option value="dropi">Salieron a Dropi</option>
+            <option value="fabrica">Salieron a fábrica</option>
             <option value="todos">Todos los códigos</option>
           </select>
           <select
@@ -314,7 +315,9 @@ export function ReferenceDetail() {
                       ? 'No hay salidas a páginas con estos filtros.'
                       : view === 'dropi'
                         ? 'No hay salidas a Dropi con estos filtros.'
-                        : 'No hay códigos con este filtro.'}
+                        : view === 'fabrica'
+                          ? 'No hay salidas a fábrica con estos filtros.'
+                          : 'No hay códigos con este filtro.'}
                 </td>
               </tr>
             )}

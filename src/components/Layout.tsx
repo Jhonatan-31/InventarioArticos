@@ -20,6 +20,7 @@ const groups = [
     links: [
       { to: '/salida-paginas', label: 'Salida páginas', icon: <IconScan />, end: false },
       { to: '/salida-dropi', label: 'Salida Dropi', icon: <IconScan />, end: false },
+      { to: '/salida-fabrica', label: 'Salida de fábrica', icon: <IconScan />, end: false },
       { to: '/devolucion', label: 'Devolución', icon: <IconScan />, end: false },
     ],
   },
@@ -47,6 +48,7 @@ const names: Record<string, string> = {
   '/pares': 'Pares',
   '/salida-paginas': 'Salida páginas',
   '/salida-dropi': 'Salida Dropi',
+  '/salida-fabrica': 'Salida de fábrica',
   '/devolucion': 'Devolución',
   '/contabilidad': 'Contabilidad',
   '/etiquetas': 'Etiquetas',

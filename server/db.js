@@ -63,6 +63,25 @@ function addColumn(table, column, definition) {
   }
 }
 
+function migratePaymentsChannels() {
+  const row = database.prepare(`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'payments'`).get();
+  const sql = String(row?.sql || '');
+  if (!sql || sql.includes("'fabrica'")) return;
+  database.exec(`
+    CREATE TABLE payments_mig (
+      id TEXT PRIMARY KEY,
+      channel TEXT NOT NULL CHECK (channel IN ('paginas', 'dropi', 'fabrica')),
+      amount INTEGER NOT NULL CHECK (amount > 0),
+      note TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL
+    );
+    INSERT INTO payments_mig (id, channel, amount, note, created_at)
+    SELECT id, channel, amount, note, created_at FROM payments;
+    DROP TABLE payments;
+    ALTER TABLE payments_mig RENAME TO payments;
+  `);
+}
+
 const schema = `
 PRAGMA foreign_keys = ON;
 PRAGMA journal_mode = DELETE;
@@ -141,7 +160,7 @@ export function getDb() {
   database.exec(`
     CREATE TABLE IF NOT EXISTS payments (
       id TEXT PRIMARY KEY,
-      channel TEXT NOT NULL CHECK (channel IN ('paginas', 'dropi')),
+      channel TEXT NOT NULL CHECK (channel IN ('paginas', 'dropi', 'fabrica')),
       amount INTEGER NOT NULL CHECK (amount > 0),
       note TEXT NOT NULL DEFAULT '',
       created_at TEXT NOT NULL
@@ -149,6 +168,7 @@ export function getDb() {
     CREATE INDEX IF NOT EXISTS idx_pairs_channel ON pairs(channel);
     CREATE INDEX IF NOT EXISTS idx_movements_channel ON movements(channel);
   `);
+  migratePaymentsChannels();
   database.exec(`
     UPDATE pairs
     SET size = (

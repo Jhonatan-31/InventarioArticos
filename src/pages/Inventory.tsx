@@ -203,6 +203,7 @@ export function Inventory() {
             <option value="inventario">Solo normales</option>
             <option value="paginas">Salieron a páginas</option>
             <option value="dropi">Salieron a Dropi</option>
+            <option value="fabrica">Salieron a fábrica</option>
             <option value="salida">Todas las salidas</option>
             <option value="todos">Todos</option>
           </select>

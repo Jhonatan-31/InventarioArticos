@@ -19,6 +19,9 @@ export function StatusPill({
   if (normalized === 'salida' && channel === 'dropi') {
     return <span className="pill dropi">Salió a Dropi</span>;
   }
+  if (normalized === 'salida' && channel === 'fabrica') {
+    return <span className="pill fabrica">Salió a fábrica</span>;
+  }
   if (normalized === 'prioridad' || normalized === 'devolucion') {
     return <span className="pill devolucion">Devolución</span>;
   }

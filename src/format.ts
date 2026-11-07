@@ -47,6 +47,7 @@ export const movementLabel: Record<string, string> = {
 export const channelLabel: Record<string, string> = {
   paginas: 'Páginas',
   dropi: 'Dropi',
+  fabrica: 'Fábrica',
 };
 
 export const labelStateLabel: Record<string, string> = {

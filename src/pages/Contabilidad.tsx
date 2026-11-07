@@ -64,13 +64,14 @@ export function Contabilidad() {
       <PageHeader
         eyebrow="Cuentas"
         title="Contabilidad de salidas"
-        text="Cada canal lleva su propia cuenta. Lo que salió se carga al precio del par, la devolución lo reversa y el abono baja el saldo."
+        text="Cada canal lleva su propia cuenta: páginas, Dropi y fábrica. Lo que salió se carga al precio del par, la devolución lo reversa y el abono baja el saldo."
       />
       {error && <p className="form-error">{error}</p>}
       {data && (
-        <section className="split">
+        <section className="accounts-grid">
           <AccountCard account={data.paginas} />
           <AccountCard account={data.dropi} />
+          <AccountCard account={data.fabrica} />
         </section>
       )}
       <section className="panel">
@@ -81,6 +82,7 @@ export function Contabilidad() {
             <select value={channel} onChange={(event) => setChannel(event.target.value as Channel)}>
               <option value="paginas">Páginas</option>
               <option value="dropi">Dropi</option>
+              <option value="fabrica">Fábrica</option>
             </select>
           </label>
           <label className="field">

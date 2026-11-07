@@ -40,14 +40,21 @@ export function Scanner({ mode, channel }: { mode: 'salida' | 'devolucion'; chan
   const queue = useRef<string[]>([]);
   const working = useRef(false);
   const last = useRef({ code: '', at: 0 });
+  const channelTitle = channel === 'dropi' ? 'Dropi' : channel === 'fabrica' ? 'fábrica' : 'páginas';
   const title = mode === 'devolucion'
     ? 'Devolución'
-    : channel === 'dropi' ? 'Salida para Dropi' : 'Salida para páginas';
+    : channel === 'fabrica'
+      ? 'Salida de fábrica'
+      : channel === 'dropi'
+        ? 'Salida para Dropi'
+        : 'Salida para páginas';
   const note = mode === 'devolucion'
-    ? 'Al escanear, el par vuelve al inventario como prioritario y se descuenta de la cuenta del canal por el que salió.'
-    : channel === 'dropi'
-      ? 'Este apartado solo registra salidas de Dropi. Lo que salga aquí no se mezcla con las páginas.'
-      : 'Este apartado solo registra salidas de las páginas. Lo que salga aquí no se mezcla con Dropi.';
+    ? 'Al escanear, el par vuelve al inventario como devolución y se descuenta de la cuenta del canal por el que salió.'
+    : channel === 'fabrica'
+      ? 'Este apartado solo registra salidas de fábrica. Lo que salga aquí no se mezcla con páginas ni con Dropi.'
+      : channel === 'dropi'
+        ? 'Este apartado solo registra salidas de Dropi. Lo que salga aquí no se mezcla con las páginas.'
+        : 'Este apartado solo registra salidas de las páginas. Lo que salga aquí no se mezcla con Dropi.';
 
   useEffect(() => {
     setResult(null);
@@ -158,7 +165,7 @@ export function Scanner({ mode, channel }: { mode: 'salida' | 'devolucion'; chan
               />
             </label>
             <button className="btn primary" type="submit">
-              {mode === 'salida' ? `Registrar salida a ${channel === 'dropi' ? 'Dropi' : 'páginas'}` : 'Registrar devolución'}
+              {mode === 'salida' ? `Registrar salida a ${channelTitle}` : 'Registrar devolución'}
             </button>
           </form>
           {result && (

@@ -347,6 +347,8 @@ a { color: var(--cognac-deep); }
 .pill.salida, .pill.reimpresion { color: #5c534c; background: #efe8e0; }
 .pill.paginas { color: #1d4d34; background: #e5f2ea; }
 .pill.dropi { color: #5c3d78; background: #f3eaf8; }
+.pill.fabrica { color: #5a3a16; background: #f3e8d8; }
+.accounts-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; width: 100%; }
 .pill.prioridad, .pill.devolucion, .pill.novedad { color: var(--ox); background: #f8e7e4; }
 .pill.label-por_confirmar { color: #7a4b12; background: #f8efd8; }
 .pill.label-activa { color: var(--green); background: #e5f2ea; }
@@ -613,7 +615,8 @@ table.bodega tfoot td { position: sticky; bottom: 0; background: #f6efe6; font-w
   .scanner-grid,
   .form-grid,
   .entry-sum,
-  .money-grid { grid-template-columns: 1fr; }
+  .money-grid,
+  .accounts-grid { grid-template-columns: 1fr; }
   .today-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .size-inputs { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .page-header { flex-direction: column; align-items: flex-start; }

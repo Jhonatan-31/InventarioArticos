@@ -29,6 +29,7 @@ export function App() {
             <Route path="pares" element={<Inventory />} />
             <Route path="salida-paginas" element={<Scanner mode="salida" channel="paginas" />} />
             <Route path="salida-dropi" element={<Scanner mode="salida" channel="dropi" />} />
+            <Route path="salida-fabrica" element={<Scanner mode="salida" channel="fabrica" />} />
             <Route path="devolucion" element={<Scanner mode="devolucion" />} />
             <Route path="escaner" element={<Navigate to="/salida-paginas" replace />} />
             <Route path="contabilidad" element={<Contabilidad />} />

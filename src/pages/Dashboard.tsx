@@ -7,13 +7,14 @@ import { useUi } from '../ui';
 import { PageHeader } from '../components/PageHeader';
 import { MovementPill, StatusPill } from '../components/StatusPill';
 
-type Scope = 'todos' | 'bodega' | 'paginas' | 'dropi';
+type Scope = 'todos' | 'bodega' | 'paginas' | 'dropi' | 'fabrica';
 
 const SCOPE_OPTIONS: Array<{ key: Scope; label: string }> = [
   { key: 'todos', label: 'Todos' },
   { key: 'bodega', label: 'Bodega' },
   { key: 'paginas', label: 'Páginas' },
   { key: 'dropi', label: 'Dropi' },
+  { key: 'fabrica', label: 'Fábrica' },
 ];
 
 export function Dashboard() {
@@ -60,7 +61,8 @@ export function Dashboard() {
     if (scope === 'todos') return rows;
     if (scope === 'bodega') return rows.filter((move) => move.type === 'entrada' || move.type === 'devolucion');
     if (scope === 'paginas') return rows.filter((move) => move.type === 'salida' && move.channel === 'paginas');
-    return rows.filter((move) => move.type === 'salida' && move.channel === 'dropi');
+    if (scope === 'dropi') return rows.filter((move) => move.type === 'salida' && move.channel === 'dropi');
+    return rows.filter((move) => move.type === 'salida' && move.channel === 'fabrica');
   }, [data, scope]);
 
   const scopeTitle = {
@@ -68,13 +70,15 @@ export function Dashboard() {
     bodega: 'Lo que hay en bodega',
     paginas: 'Salidas a páginas',
     dropi: 'Salidas a Dropi',
+    fabrica: 'Salidas de fábrica',
   }[scope];
 
   const scopeHint = {
     todos: 'Últimas salidas de bodega, sin importar el canal.',
-    bodega: 'Pares que siguen en inventario, incluidos prioritarios.',
+    bodega: 'Pares que siguen en inventario, incluidas las devoluciones.',
     paginas: 'Pares que salieron por el canal de páginas.',
     dropi: 'Pares que salieron por Dropi.',
+    fabrica: 'Pares que salieron a fábrica.',
   }[scope];
 
   const scopeLink = {
@@ -82,6 +86,7 @@ export function Dashboard() {
     bodega: '/pares?estado=existencia',
     paginas: '/pares?estado=paginas',
     dropi: '/pares?estado=dropi',
+    fabrica: '/pares?estado=fabrica',
   }[scope];
 
   return (
@@ -89,7 +94,7 @@ export function Dashboard() {
       <PageHeader
         eyebrow="Calzado Evalook"
         title="Panel de inventario"
-        text="Existencia por talla, salidas separadas para páginas y Dropi, y la plata que queda en bodega o por cobrar."
+        text="Existencia por talla, salidas separadas para páginas, Dropi y fábrica, y la plata que queda en bodega o por cobrar."
       />
 
       <div className="panel filter-panel">
@@ -138,6 +143,11 @@ export function Dashboard() {
             </article>
           </section>
           <section className="kpi-grid">
+            <article className={`kpi${scope === 'fabrica' ? ' accent' : ''}`}>
+              <span>Salieron a fábrica</span>
+              <strong>{data.totals.outFabrica}</strong>
+              <small>Saldo {formatMoney(data.totals.fabricaBalance)}</small>
+            </article>
             <article className="kpi">
               <span>Plata en bodega</span>
               <strong className="money-kpi">{formatMoney(data.totals.warehouseValue)}</strong>
@@ -148,14 +158,9 @@ export function Dashboard() {
               <strong>{data.totals.out}</strong>
               <small>Fuera de inventario</small>
             </article>
-            <article className="kpi">
-              <span>Referencias</span>
-              <strong>{data.totals.references}</strong>
-              <small>Siguiente código {data.nextQr}</small>
-            </article>
             <article className="kpi accent">
               <span>Por cobrar</span>
-              <strong className="money-kpi">{formatMoney(data.totals.paginasOwed + data.totals.dropiOwed)}</strong>
+              <strong className="money-kpi">{formatMoney(data.totals.paginasOwed + data.totals.dropiOwed + data.totals.fabricaOwed)}</strong>
               <small>Antes de abonos</small>
             </article>
           </section>
@@ -196,7 +201,9 @@ export function Dashboard() {
                             ? 'Todavía no hay salidas a páginas.'
                             : scope === 'dropi'
                               ? 'Todavía no hay salidas a Dropi.'
-                              : 'Todavía no hay salidas registradas.'}
+                              : scope === 'fabrica'
+                                ? 'Todavía no hay salidas a fábrica.'
+                                : 'Todavía no hay salidas registradas.'}
                       </td>
                     </tr>
                   )}
