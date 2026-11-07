@@ -58,10 +58,8 @@ try {
 
   const oxfordView = api.getReference(oxford.id);
   assert(oxfordView.code === 'OX-40' && oxfordView.inStock === 1, 'la referencia muestra solo lo que sigue en bodega');
-  const inBodega = api.listPairs({ referenceId: oxford.id, status: 'existencia', pageSize: '50' });
-  assert(inBodega.total === 1 && !inBodega.items.some((item) => item.status === 'salida'), 'al mirar la referencia no aparecen los códigos que ya salieron');
-  const moreStock = api.addStock(oxford.id, { 40: 2 }, 'Factura 11');
-  assert(moreStock.from === '00005' && moreStock.to === '00006', 'un ingreso nuevo no reutiliza códigos que ya existían');
+  const oxfordStock = api.listPairs({ referenceId: oxford.id, status: 'existencia', pageSize: '50' });
+  assert(oxfordStock.total === 1 && !oxfordStock.items.some((item) => item.status === 'salida'), 'al mirar la referencia no aparecen los códigos que ya salieron');
 
   let accounts = api.accounting();
   assert(accounts.paginas.balance === 80000 && accounts.dropi.balance === 80000, 'cada canal debe el precio del par que salió');
@@ -113,11 +111,14 @@ try {
   const buffer = Buffer.from(await buildWorkbook(api.reportDataset()));
   assert(buffer.subarray(0, 2).toString() === 'PK', 'el informe Excel es un archivo válido');
 
+  const moreStock = api.addStock(oxford.id, { 40: 2 }, 'Factura 11');
+  assert(moreStock.from === '00005' && moreStock.to === '00006', 'un ingreso nuevo no reutiliza códigos que ya existían');
+
   const saved = new DatabaseSync(file, { readOnly: true });
   const onDisk = Number(saved.prepare(`SELECT COUNT(*) AS n FROM pairs`).get().n);
-  const inBodega = Number(saved.prepare(`SELECT COUNT(*) AS n FROM pairs WHERE status IN ('inventario', 'prioridad')`).get().n);
+  const stockOnDisk = Number(saved.prepare(`SELECT COUNT(*) AS n FROM pairs WHERE status IN ('inventario', 'prioridad')`).get().n);
   saved.close();
-  assert(onDisk === 4 && inBodega === 3, 'los pares quedan guardados en el archivo SQL local');
+  assert(onDisk === 6 && stockOnDisk === 5, 'los pares quedan guardados en el archivo SQL local');
   console.log('ALL PASSED');
 } finally {
   closeDb();
