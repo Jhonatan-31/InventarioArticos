@@ -119,8 +119,8 @@ export function Dashboard() {
       {error && <p className="form-error">{error}</p>}
       {!data && !error && <p className="muted">Cargando el panel…</p>}
       {data && (
-        <>
-          <section className="kpi-grid">
+        <div className="dashboard-board">
+          <section className="dashboard-metrics">
             <article className={`kpi${scope === 'bodega' ? ' accent' : ''}`}>
               <span>En existencia</span>
               <strong>{data.totals.inStock}</strong>
@@ -141,8 +141,6 @@ export function Dashboard() {
               <strong>{data.totals.outDropi}</strong>
               <small>Saldo {formatMoney(data.totals.dropiBalance)}</small>
             </article>
-          </section>
-          <section className="kpi-grid">
             <article className={`kpi${scope === 'fabrica' ? ' accent' : ''}`}>
               <span>Salieron a fábrica</span>
               <strong>{data.totals.outFabrica}</strong>
@@ -164,6 +162,7 @@ export function Dashboard() {
               <small>Antes de abonos</small>
             </article>
           </section>
+
           <section className="today-grid">
             <div><span>Entradas hoy</span><b>{data.totals.entriesToday}</b></div>
             <div><span>Salidas hoy</span><b>{data.totals.exitsToday}</b></div>
@@ -171,56 +170,58 @@ export function Dashboard() {
             <div><span>Novedades abiertas</span><b>{data.totals.incidentsOpen}</b></div>
           </section>
 
-          <article className="panel">
-            <header className="panel-head">
-              <div>
-                <h2>{scopeTitle}</h2>
-                <p className="lede">{scopeHint}</p>
-              </div>
-              <Link to={scopeLink}>Ver todos ({pairsTotal})</Link>
-            </header>
-            <div className="table-wrap">
-              <table className="data">
-                <thead>
-                  <tr>
-                    <th>Código</th>
-                    <th>Referencia</th>
-                    <th>Detalle</th>
-                    <th>Estado</th>
-                    <th>Ingreso</th>
-                    <th>Salida</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pairs.length === 0 && (
+          <section className="dashboard-section">
+            <article className="panel">
+              <header className="panel-head">
+                <div>
+                  <h2>{scopeTitle}</h2>
+                  <p className="lede">{scopeHint}</p>
+                </div>
+                <Link to={scopeLink}>Ver todos ({pairsTotal})</Link>
+              </header>
+              <div className="table-wrap">
+                <table className="data">
+                  <thead>
                     <tr>
-                      <td colSpan={6}>
-                        {scope === 'bodega'
-                          ? 'No hay pares en bodega.'
-                          : scope === 'paginas'
-                            ? 'Todavía no hay salidas a páginas.'
-                            : scope === 'dropi'
-                              ? 'Todavía no hay salidas a Dropi.'
-                              : scope === 'fabrica'
-                                ? 'Todavía no hay salidas a fábrica.'
-                                : 'Todavía no hay salidas registradas.'}
-                      </td>
+                      <th>Código</th>
+                      <th>Referencia</th>
+                      <th>Detalle</th>
+                      <th>Estado</th>
+                      <th>Ingreso</th>
+                      <th>Salida</th>
                     </tr>
-                  )}
-                  {pairs.map((item) => (
-                    <tr key={item.id} className={item.status === 'prioridad' ? 'priority' : ''}>
-                      <td className="mono">{item.qrCode}</td>
-                      <td>{item.referenceCode}</td>
-                      <td>{item.name}<small>{item.color} · Talla {item.size}</small></td>
-                      <td><StatusPill status={item.status} channel={item.channel} /></td>
-                      <td>{formatWhen(item.createdAt)}</td>
-                      <td>{formatWhen(item.exitedAt)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </article>
+                  </thead>
+                  <tbody>
+                    {pairs.length === 0 && (
+                      <tr>
+                        <td colSpan={6}>
+                          {scope === 'bodega'
+                            ? 'No hay pares en bodega.'
+                            : scope === 'paginas'
+                              ? 'Todavía no hay salidas a páginas.'
+                              : scope === 'dropi'
+                                ? 'Todavía no hay salidas a Dropi.'
+                                : scope === 'fabrica'
+                                  ? 'Todavía no hay salidas a fábrica.'
+                                  : 'Todavía no hay salidas registradas.'}
+                        </td>
+                      </tr>
+                    )}
+                    {pairs.map((item) => (
+                      <tr key={item.id} className={item.status === 'prioridad' ? 'priority' : ''}>
+                        <td className="mono">{item.qrCode}</td>
+                        <td>{item.referenceCode}</td>
+                        <td>{item.name}<small>{item.color} · Talla {item.size}</small></td>
+                        <td><StatusPill status={item.status} channel={item.channel} /></td>
+                        <td>{formatWhen(item.createdAt)}</td>
+                        <td>{formatWhen(item.exitedAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </article>
+          </section>
 
           <section className="split">
             <article className="panel">
@@ -280,74 +281,80 @@ export function Dashboard() {
               )}
             </article>
           </section>
-          <article className="panel">
-            <header className="panel-head">
-              <h2>Rotación por referencia</h2>
-            </header>
-            <div className="table-wrap">
-              <table className="data">
-                <thead>
-                  <tr>
-                    <th>Referencia</th>
-                    <th>Modelo</th>
-                    <th>Existencia</th>
-                    <th>Devoluciones</th>
-                    <th>Salidas</th>
-                    <th>Devoluciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.byReference.length === 0 && (
-                    <tr><td colSpan={6}>Sin movimientos todavía.</td></tr>
-                  )}
-                  {[...data.byReference].sort((a, b) => b.exits - a.exits || a.code.localeCompare(b.code)).map((item) => (
-                    <tr key={item.id} className={item.priority > 0 ? 'priority' : ''}>
-                      <td className="mono">{item.code}</td>
-                      <td>{item.name}<small>{item.color} · {formatMoney(item.price)}</small></td>
-                      <td>{item.inStock}</td>
-                      <td>{item.priority}</td>
-                      <td>{item.exits}</td>
-                      <td>{item.returns}</td>
+
+          <section className="dashboard-section">
+            <article className="panel compact-table">
+              <header className="panel-head">
+                <h2>Rotación por referencia</h2>
+              </header>
+              <div className="table-wrap">
+                <table className="data">
+                  <thead>
+                    <tr>
+                      <th>Referencia</th>
+                      <th>Modelo</th>
+                      <th>Existencia</th>
+                      <th>En devolución</th>
+                      <th>Salidas</th>
+                      <th>Retornos</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </article>
-          <article className="panel">
-            <header className="panel-head">
-              <h2>Últimos movimientos</h2>
-              <Link to="/novedades">Novedades</Link>
-            </header>
-            <div className="table-wrap">
-              <table className="data">
-                <thead>
-                  <tr>
-                    <th>Fecha</th>
-                    <th>Tipo</th>
-                    <th>Código</th>
-                    <th>Referencia</th>
-                    <th>Detalle</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {movements.length === 0 && (
-                    <tr><td colSpan={5}>No hay movimientos con este filtro.</td></tr>
-                  )}
-                  {movements.map((move) => (
-                    <tr key={move.id}>
-                      <td>{formatWhen(move.createdAt)}</td>
-                      <td><MovementPill type={move.type} /></td>
-                      <td className="mono">{move.qrCode}</td>
-                      <td>{move.referenceCode}<small>{move.name}</small></td>
-                      <td>{move.note}</td>
+                  </thead>
+                  <tbody>
+                    {data.byReference.length === 0 && (
+                      <tr><td colSpan={6}>Sin movimientos todavía.</td></tr>
+                    )}
+                    {[...data.byReference].sort((a, b) => b.exits - a.exits || a.code.localeCompare(b.code)).map((item) => (
+                      <tr key={item.id} className={item.priority > 0 ? 'priority' : ''}>
+                        <td className="mono">{item.code}</td>
+                        <td>{item.name}<small>{item.color} · {formatMoney(item.price)}</small></td>
+                        <td>{item.inStock}</td>
+                        <td>{item.priority}</td>
+                        <td>{item.exits}</td>
+                        <td>{item.returns}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </article>
+          </section>
+
+          <section className="dashboard-section">
+            <article className="panel compact-table">
+              <header className="panel-head">
+                <h2>Últimos movimientos</h2>
+                <Link to="/novedades">Novedades</Link>
+              </header>
+              <div className="table-wrap">
+                <table className="data">
+                  <thead>
+                    <tr>
+                      <th>Fecha</th>
+                      <th>Tipo</th>
+                      <th>Código</th>
+                      <th>Referencia</th>
+                      <th>Detalle</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </article>
-        </>
+                  </thead>
+                  <tbody>
+                    {movements.length === 0 && (
+                      <tr><td colSpan={5}>No hay movimientos con este filtro.</td></tr>
+                    )}
+                    {movements.map((move) => (
+                      <tr key={move.id}>
+                        <td>{formatWhen(move.createdAt)}</td>
+                        <td><MovementPill type={move.type} /></td>
+                        <td className="mono">{move.qrCode}</td>
+                        <td>{move.referenceCode}<small>{move.name}</small></td>
+                        <td>{move.note}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </article>
+          </section>
+        </div>
       )}
     </div>
   );
