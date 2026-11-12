@@ -89,6 +89,27 @@ app.post('/api/payments', (req, res) => {
   res.status(201).json(api.addPayment(body.channel, body.amount, body.note));
 });
 
+app.get('/api/excel', (req, res) => {
+  res.json(api.excelData(req.query.sheet || 'Dropi'));
+});
+
+app.post('/api/excel/scan', (req, res) => {
+  const body = req.body || {};
+  res.json(api.excelScan(body.code, body.sheet || 'Dropi'));
+});
+
+app.post('/api/excel/orders', (req, res) => {
+  res.status(201).json(api.createExcelOrder(req.body || {}));
+});
+
+app.patch('/api/excel/orders/:id', (req, res) => {
+  res.json(api.updateExcelOrder(req.params.id, req.body || {}));
+});
+
+app.delete('/api/excel/orders/:id', (req, res) => {
+  res.json(api.deleteExcelOrder(req.params.id));
+});
+
 app.get('/api/media/:file', (req, res) => {
   const file = String(req.params.file || '');
   if (!/^[a-z0-9-]+\.(jpg|png|webp)$/i.test(file)) {

@@ -440,6 +440,156 @@ function listPairsFiltered(whereSql, params) {
   `).all(...params).map(mapPair);
 }
 
+const EXCEL_SHEETS = ['Dropi', 'Articos', 'Evalook'];
+const EXCEL_SHIP_STATUSES = ['Enviado', 'Problema', 'Devolución', 'Entregado'];
+const EXCEL_SHEET_CHANNEL = { Dropi: 'dropi', Articos: 'fabrica', Evalook: 'paginas' };
+
+function isExcelSheet(value) {
+  return EXCEL_SHEETS.includes(String(value || ''));
+}
+
+function isShipStatus(value) {
+  return EXCEL_SHIP_STATUSES.includes(String(value || ''));
+}
+
+function cleanMoney(value, label) {
+  const amount = Number(value);
+  if (!Number.isInteger(amount) || amount < 0 || amount > 100000000) {
+    fail(400, `${label} debe ser un entero en pesos, entre 0 y 100.000.000.`);
+  }
+  return amount;
+}
+
+function cleanOrderDate(value) {
+  const text = String(value || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) fail(400, 'La fecha debe ir en formato AAAA-MM-DD.');
+  const date = new Date(`${text}T12:00:00`);
+  if (Number.isNaN(date.getTime())) fail(400, 'La fecha del pedido no es válida.');
+  return text;
+}
+
+function profitOf(cost, sale, shipping) {
+  return sale - cost - shipping;
+}
+
+function mapExcelPerson(row) {
+  return {
+    id: row.id,
+    firstName: row.first_name,
+    lastName: row.last_name,
+    phone: row.phone || '',
+    transport: row.transport || '',
+    advisor: row.advisor || '',
+    updatedAt: row.updated_at,
+  };
+}
+
+function mapExcelOrder(row) {
+  const cost = Number(row.cost_price || 0);
+  const sale = Number(row.sale_price || 0);
+  const shipping = Number(row.shipping_price || 0);
+  return {
+    id: row.id,
+    sheet: row.sheet,
+    guideNumber: row.guide_number || '',
+    firstName: row.first_name || '',
+    lastName: row.last_name || '',
+    transport: row.transport || '',
+    advisor: row.advisor || '',
+    shipStatus: row.ship_status,
+    costPrice: cost,
+    salePrice: sale,
+    shippingPrice: shipping,
+    profit: profitOf(cost, sale, shipping),
+    orderDate: row.order_date,
+    pairId: row.pair_id || null,
+    personId: row.person_id || null,
+    qrCode: row.qr_code || null,
+    referenceCode: row.reference_code || null,
+    pairName: row.reference_name || null,
+    pairColor: row.reference_color || null,
+    pairSize: row.pair_size || null,
+    pairChannel: row.pair_channel || null,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+const EXCEL_ORDER_SELECT = `
+  SELECT o.*,
+         p.qr_code, p.size AS pair_size, p.channel AS pair_channel,
+         r.code AS reference_code, r.name AS reference_name, r.color AS reference_color
+  FROM excel_orders o
+  LEFT JOIN pairs p ON p.id = o.pair_id
+  LEFT JOIN shoe_refs r ON r.id = p.reference_id
+`;
+
+function upsertExcelPerson(firstName, lastName, transport, advisor, phone = '') {
+  const first = requiredText(firstName, 'El nombre', 60, 1);
+  const last = requiredText(lastName, 'El apellido', 60, 1);
+  const now = new Date().toISOString();
+  const existing = db.prepare(`
+    SELECT * FROM excel_people WHERE first_name = ? AND last_name = ?
+  `).get(first, last);
+  if (existing) {
+    db.prepare(`
+      UPDATE excel_people
+      SET phone = CASE WHEN ? <> '' THEN ? ELSE phone END,
+          transport = CASE WHEN ? <> '' THEN ? ELSE transport END,
+          advisor = CASE WHEN ? <> '' THEN ? ELSE advisor END,
+          updated_at = ?
+      WHERE id = ?
+    `).run(phone, phone, transport, transport, advisor, advisor, now, existing.id);
+    return existing.id;
+  }
+  const id = crypto.randomUUID();
+  db.prepare(`
+    INSERT INTO excel_people (id, first_name, last_name, phone, transport, advisor, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(id, first, last, cleanOptional(phone, 30), cleanOptional(transport, 60), cleanOptional(advisor, 60), now);
+  return id;
+}
+
+function listExcelOrders(sheet) {
+  if (!isExcelSheet(sheet)) fail(400, 'La hoja debe ser Dropi, Articos o Evalook.');
+  return db.prepare(`
+    ${EXCEL_ORDER_SELECT}
+    WHERE o.sheet = ?
+    ORDER BY o.order_date DESC, o.created_at DESC, o.rowid DESC
+  `).all(sheet).map(mapExcelOrder);
+}
+
+function excelSheetSummary(sheet) {
+  const orders = listExcelOrders(sheet);
+  const totalProfit = orders.reduce((sum, row) => sum + row.profit, 0);
+  const byStatus = Object.fromEntries(EXCEL_SHIP_STATUSES.map((status) => [status, 0]));
+  orders.forEach((row) => { byStatus[row.shipStatus] += 1; });
+  return {
+    sheet,
+    channel: EXCEL_SHEET_CHANNEL[sheet],
+    count: orders.length,
+    totalProfit,
+    byStatus,
+    orders,
+  };
+}
+
+function excelModuleData(sheet = 'Dropi') {
+  const current = isExcelSheet(sheet) ? sheet : 'Dropi';
+  return {
+    sheets: EXCEL_SHEETS,
+    shipStatuses: EXCEL_SHIP_STATUSES,
+    sheetChannel: EXCEL_SHEET_CHANNEL,
+    currentSheet: current,
+    summary: excelSheetSummary(current),
+    people: db.prepare(`
+      SELECT * FROM excel_people
+      ORDER BY updated_at DESC, last_name ASC, first_name ASC
+      LIMIT 200
+    `).all().map(mapExcelPerson),
+  };
+}
+
 export const api = {
   sequence() {
     const row = db.prepare(`SELECT value FROM meta WHERE key = 'next_qr'`).get();
@@ -899,5 +1049,147 @@ export const api = {
     const now = new Date().toISOString();
     db.prepare(`INSERT INTO payments (id, channel, amount, note, created_at) VALUES (?, ?, ?, ?, ?)`).run(id, channel, value, text, now);
     return accountingData();
+  },
+
+  excelData(sheet) {
+    return excelModuleData(sheet);
+  },
+
+  /** Solo lectura: no cambia inventario. Trae par + persona previa si existe. */
+  excelScan(code, sheet) {
+    if (!isExcelSheet(sheet)) fail(400, 'La hoja debe ser Dropi, Articos o Evalook.');
+    const pair = findPairByScan(code);
+    if (!pair) fail(404, 'No encontré un par con ese código de barras.');
+    const preferredChannel = EXCEL_SHEET_CHANNEL[sheet];
+    const linked = db.prepare(`
+      ${EXCEL_ORDER_SELECT}
+      WHERE o.pair_id = ?
+      ORDER BY o.updated_at DESC
+      LIMIT 1
+    `).get(pair.id);
+    const personFromPair = linked ? mapExcelOrder(linked) : null;
+    let person = null;
+    if (personFromPair?.personId) {
+      const row = db.prepare(`SELECT * FROM excel_people WHERE id = ?`).get(personFromPair.personId);
+      if (row) person = mapExcelPerson(row);
+    }
+    if (!person && personFromPair?.firstName && personFromPair?.lastName) {
+      person = {
+        id: personFromPair.personId || '',
+        firstName: personFromPair.firstName,
+        lastName: personFromPair.lastName,
+        phone: '',
+        transport: personFromPair.transport,
+        advisor: personFromPair.advisor,
+        updatedAt: personFromPair.updatedAt,
+      };
+    }
+    return {
+      pair,
+      person,
+      suggested: {
+        sheet,
+        guideNumber: personFromPair?.guideNumber || '',
+        firstName: person?.firstName || '',
+        lastName: person?.lastName || '',
+        transport: person?.transport || '',
+        advisor: person?.advisor || '',
+        shipStatus: 'Enviado',
+        costPrice: personFromPair?.costPrice || 0,
+        salePrice: pair.price || 0,
+        shippingPrice: personFromPair?.shippingPrice || 0,
+        orderDate: new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(new Date()),
+        pairId: pair.id,
+        channelHint: preferredChannel,
+        channelMatch: !pair.channel || pair.channel === preferredChannel,
+        message: person
+          ? `Código ${pair.qrCode}: se trajeron los datos de ${person.firstName} ${person.lastName}.`
+          : `Código ${pair.qrCode}: se cargó el precio de venta. Completa los datos de la persona.`,
+      },
+    };
+  },
+
+  createExcelOrder(input = {}) {
+    if (!isExcelSheet(input.sheet)) fail(400, 'La hoja debe ser Dropi, Articos o Evalook.');
+    if (!isShipStatus(input.shipStatus)) {
+      fail(400, 'El estado de envío debe ser Enviado, Problema, Devolución o Entregado.');
+    }
+    const firstName = requiredText(input.firstName, 'El nombre', 60, 1);
+    const lastName = requiredText(input.lastName, 'El apellido', 60, 1);
+    const guideNumber = cleanOptional(input.guideNumber, 60);
+    const transport = cleanOptional(input.transport, 60);
+    const advisor = cleanOptional(input.advisor, 60);
+    const costPrice = cleanMoney(input.costPrice ?? 0, 'El precio de fabricación');
+    const salePrice = cleanMoney(input.salePrice ?? 0, 'El precio de venta');
+    const shippingPrice = cleanMoney(input.shippingPrice ?? 0, 'El precio de envío');
+    const orderDate = cleanOrderDate(input.orderDate);
+    let pairId = null;
+    if (input.pairId) {
+      const pair = getPair(String(input.pairId));
+      if (!pair) fail(404, 'El par vinculado no existe.');
+      pairId = pair.id;
+    } else if (input.code) {
+      const pair = findPairByScan(input.code);
+      if (!pair) fail(404, 'No encontré un par con ese código de barras.');
+      pairId = pair.id;
+    }
+    return transaction(() => {
+      const personId = upsertExcelPerson(firstName, lastName, transport, advisor, input.phone || '');
+      const id = crypto.randomUUID();
+      const now = new Date().toISOString();
+      db.prepare(`
+        INSERT INTO excel_orders (
+          id, sheet, guide_number, first_name, last_name, transport, advisor, ship_status,
+          cost_price, sale_price, shipping_price, order_date, pair_id, person_id, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        id, input.sheet, guideNumber, firstName, lastName, transport, advisor, input.shipStatus,
+        costPrice, salePrice, shippingPrice, orderDate, pairId, personId, now, now,
+      );
+      return excelModuleData(input.sheet);
+    });
+  },
+
+  updateExcelOrder(id, input = {}) {
+    const current = db.prepare(`SELECT * FROM excel_orders WHERE id = ?`).get(String(id));
+    if (!current) fail(404, 'El pedido del Excel no existe.');
+    const sheet = input.sheet != null ? input.sheet : current.sheet;
+    if (!isExcelSheet(sheet)) fail(400, 'La hoja debe ser Dropi, Articos o Evalook.');
+    const shipStatus = input.shipStatus != null ? input.shipStatus : current.ship_status;
+    if (!isShipStatus(shipStatus)) {
+      fail(400, 'El estado de envío debe ser Enviado, Problema, Devolución o Entregado.');
+    }
+    const firstName = requiredText(input.firstName ?? current.first_name, 'El nombre', 60, 1);
+    const lastName = requiredText(input.lastName ?? current.last_name, 'El apellido', 60, 1);
+    const guideNumber = cleanOptional(input.guideNumber ?? current.guide_number, 60);
+    const transport = cleanOptional(input.transport ?? current.transport, 60);
+    const advisor = cleanOptional(input.advisor ?? current.advisor, 60);
+    const costPrice = cleanMoney(input.costPrice ?? current.cost_price, 'El precio de fabricación');
+    const salePrice = cleanMoney(input.salePrice ?? current.sale_price, 'El precio de venta');
+    const shippingPrice = cleanMoney(input.shippingPrice ?? current.shipping_price, 'El precio de envío');
+    const orderDate = cleanOrderDate(input.orderDate ?? current.order_date);
+    return transaction(() => {
+      const personId = upsertExcelPerson(firstName, lastName, transport, advisor, input.phone || '');
+      const now = new Date().toISOString();
+      db.prepare(`
+        UPDATE excel_orders
+        SET sheet = ?, guide_number = ?, first_name = ?, last_name = ?, transport = ?, advisor = ?,
+            ship_status = ?, cost_price = ?, sale_price = ?, shipping_price = ?, order_date = ?,
+            person_id = ?, updated_at = ?
+        WHERE id = ?
+      `).run(
+        sheet, guideNumber, firstName, lastName, transport, advisor,
+        shipStatus, costPrice, salePrice, shippingPrice, orderDate,
+        personId, now, current.id,
+      );
+      return excelModuleData(sheet);
+    });
+  },
+
+  deleteExcelOrder(id) {
+    const current = db.prepare(`SELECT sheet FROM excel_orders WHERE id = ?`).get(String(id));
+    if (!current) fail(404, 'El pedido del Excel no existe.');
+    db.prepare(`DELETE FROM excel_orders WHERE id = ?`).run(String(id));
+    return excelModuleData(current.sheet);
   },
 };

@@ -2,6 +2,10 @@ import type {
   AccountingData,
   Channel,
   DashboardData,
+  ExcelModuleData,
+  ExcelOrderInput,
+  ExcelScanResult,
+  ExcelSheet,
   Incident,
   LabelCheck,
   Movement,
@@ -108,6 +112,35 @@ export function addPayment(channel: Channel, amount: number, note: string) {
     method: 'POST',
     body: JSON.stringify({ channel, amount, note }),
   });
+}
+
+export const getExcelData = (sheet: ExcelSheet = 'Dropi') => (
+  request<ExcelModuleData>(`/api/excel?sheet=${encodeURIComponent(sheet)}`)
+);
+
+export function excelScan(code: string, sheet: ExcelSheet) {
+  return request<ExcelScanResult>('/api/excel/scan', {
+    method: 'POST',
+    body: JSON.stringify({ code, sheet }),
+  });
+}
+
+export function createExcelOrder(body: ExcelOrderInput) {
+  return request<ExcelModuleData>('/api/excel/orders', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export function updateExcelOrder(id: string, body: Partial<ExcelOrderInput>) {
+  return request<ExcelModuleData>(`/api/excel/orders/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
+}
+
+export function deleteExcelOrder(id: string) {
+  return request<ExcelModuleData>(`/api/excel/orders/${id}`, { method: 'DELETE' });
 }
 
 export const getIncidents = () => request<Incident[]>('/api/incidents');

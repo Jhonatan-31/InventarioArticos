@@ -5,6 +5,7 @@ import { Bodega } from './pages/Bodega';
 import { Contabilidad } from './pages/Contabilidad';
 import { Dashboard } from './pages/Dashboard';
 import { Entrada } from './pages/Entrada';
+import { Exel } from './pages/Exel';
 import { Incidents } from './pages/Incidents';
 import { Inventory } from './pages/Inventory';
 import { Labels } from './pages/Labels';
@@ -33,6 +34,7 @@ export function App() {
             <Route path="devolucion" element={<Scanner mode="devolucion" />} />
             <Route path="escaner" element={<Navigate to="/salida-paginas" replace />} />
             <Route path="contabilidad" element={<Contabilidad />} />
+            <Route path="exel" element={<Exel />} />
             <Route path="etiquetas" element={<Labels />} />
             <Route path="novedades" element={<Incidents />} />
             <Route path="informes" element={<Reports />} />

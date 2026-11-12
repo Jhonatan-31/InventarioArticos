@@ -188,6 +188,39 @@ export function getDb() {
   `);
   migratePaymentsChannels();
   database.exec(`
+    CREATE TABLE IF NOT EXISTS excel_people (
+      id TEXT PRIMARY KEY,
+      first_name TEXT NOT NULL,
+      last_name TEXT NOT NULL,
+      phone TEXT NOT NULL DEFAULT '',
+      transport TEXT NOT NULL DEFAULT '',
+      advisor TEXT NOT NULL DEFAULT '',
+      updated_at TEXT NOT NULL,
+      UNIQUE(first_name, last_name)
+    );
+    CREATE TABLE IF NOT EXISTS excel_orders (
+      id TEXT PRIMARY KEY,
+      sheet TEXT NOT NULL CHECK (sheet IN ('Dropi', 'Articos', 'Evalook')),
+      guide_number TEXT NOT NULL DEFAULT '',
+      first_name TEXT NOT NULL DEFAULT '',
+      last_name TEXT NOT NULL DEFAULT '',
+      transport TEXT NOT NULL DEFAULT '',
+      advisor TEXT NOT NULL DEFAULT '',
+      ship_status TEXT NOT NULL CHECK (ship_status IN ('Enviado', 'Problema', 'Devolución', 'Entregado')),
+      cost_price INTEGER NOT NULL DEFAULT 0,
+      sale_price INTEGER NOT NULL DEFAULT 0,
+      shipping_price INTEGER NOT NULL DEFAULT 0,
+      order_date TEXT NOT NULL,
+      pair_id TEXT REFERENCES pairs(id),
+      person_id TEXT REFERENCES excel_people(id),
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_excel_orders_sheet ON excel_orders(sheet, order_date DESC);
+    CREATE INDEX IF NOT EXISTS idx_excel_orders_pair ON excel_orders(pair_id);
+    CREATE INDEX IF NOT EXISTS idx_excel_people_name ON excel_people(last_name, first_name);
+  `);
+  database.exec(`
     UPDATE pairs
     SET size = (
       SELECT size FROM shoe_refs WHERE shoe_refs.id = pairs.reference_id

@@ -28,6 +28,7 @@ const groups = [
     label: 'Cuentas',
     links: [
       { to: '/contabilidad', label: 'Contabilidad', icon: <IconFile />, end: false },
+      { to: '/exel', label: 'Exel', icon: <IconFile />, end: false },
     ],
   },
   {
@@ -51,6 +52,7 @@ const names: Record<string, string> = {
   '/salida-fabrica': 'Salida de fábrica',
   '/devolucion': 'Devolución',
   '/contabilidad': 'Contabilidad',
+  '/exel': 'Exel',
   '/etiquetas': 'Etiquetas',
   '/novedades': 'Novedades',
   '/informes': 'Informes',

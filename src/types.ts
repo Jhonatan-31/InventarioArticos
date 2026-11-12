@@ -183,3 +183,97 @@ export interface AccountingData {
   fabrica: ChannelAccount;
   payments: Payment[];
 }
+
+export type ExcelSheet = 'Dropi' | 'Articos' | 'Evalook';
+export type ExcelShipStatus = 'Enviado' | 'Problema' | 'Devolución' | 'Entregado';
+
+export interface ExcelPerson {
+  id: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  transport: string;
+  advisor: string;
+  updatedAt: string;
+}
+
+export interface ExcelOrder {
+  id: string;
+  sheet: ExcelSheet;
+  guideNumber: string;
+  firstName: string;
+  lastName: string;
+  transport: string;
+  advisor: string;
+  shipStatus: ExcelShipStatus;
+  costPrice: number;
+  salePrice: number;
+  shippingPrice: number;
+  profit: number;
+  orderDate: string;
+  pairId: string | null;
+  personId: string | null;
+  qrCode: string | null;
+  referenceCode: string | null;
+  pairName: string | null;
+  pairColor: string | null;
+  pairSize: string | null;
+  pairChannel: Channel | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ExcelModuleData {
+  sheets: ExcelSheet[];
+  shipStatuses: ExcelShipStatus[];
+  sheetChannel: Record<ExcelSheet, Channel>;
+  currentSheet: ExcelSheet;
+  summary: {
+    sheet: ExcelSheet;
+    channel: Channel;
+    count: number;
+    totalProfit: number;
+    byStatus: Record<ExcelShipStatus, number>;
+    orders: ExcelOrder[];
+  };
+  people: ExcelPerson[];
+}
+
+export interface ExcelScanResult {
+  pair: Pair;
+  person: ExcelPerson | null;
+  suggested: {
+    sheet: ExcelSheet;
+    guideNumber: string;
+    firstName: string;
+    lastName: string;
+    transport: string;
+    advisor: string;
+    shipStatus: ExcelShipStatus;
+    costPrice: number;
+    salePrice: number;
+    shippingPrice: number;
+    orderDate: string;
+    pairId: string;
+    channelHint: Channel;
+    channelMatch: boolean;
+    message: string;
+  };
+}
+
+export interface ExcelOrderInput {
+  sheet: ExcelSheet;
+  guideNumber?: string;
+  firstName: string;
+  lastName: string;
+  transport?: string;
+  advisor?: string;
+  shipStatus: ExcelShipStatus;
+  costPrice: number;
+  salePrice: number;
+  shippingPrice: number;
+  orderDate: string;
+  pairId?: string | null;
+  code?: string;
+  phone?: string;
+}

@@ -122,6 +122,34 @@ try {
   const moreStock = api.addStock(oxford.id, { 40: 2 }, 'Factura 11');
   assert(moreStock.from === '00005' && moreStock.to === '00006', 'un ingreso nuevo no reutiliza códigos que ya existían');
 
+  const beforeExcel = api.lookup('00002');
+  assert(beforeExcel.status === 'salida' && beforeExcel.channel === 'dropi', 'el par de Dropi sigue fuera antes de Exel');
+  const scanned = api.excelScan('00002', 'Dropi');
+  assert(scanned.pair.qrCode === '00002' && scanned.suggested.salePrice === 80000, 'Exel trae el precio al escanear sin mover inventario');
+  assert(api.lookup('00002').status === 'salida', 'el escaneo de Exel no cambia el estado del par');
+  let excel = api.createExcelOrder({
+    sheet: 'Dropi',
+    guideNumber: 'G-100',
+    firstName: 'Ana',
+    lastName: 'Rojas',
+    transport: 'Interrapidisimo',
+    advisor: 'Laura',
+    shipStatus: 'Enviado',
+    costPrice: 20000,
+    salePrice: 80000,
+    shippingPrice: 10000,
+    orderDate: '2026-11-12',
+    pairId: scanned.pair.id,
+  });
+  assert(excel.summary.count === 1 && excel.summary.totalProfit === 50000, 'Exel calcula ganancia como venta - fabricación - envío');
+  const again = api.excelScan('00002', 'Dropi');
+  assert(again.person?.firstName === 'Ana' && again.suggested.lastName === 'Rojas', 'el segundo escaneo trae los datos de la persona');
+  excel = api.updateExcelOrder(excel.summary.orders[0].id, { shipStatus: 'Entregado' });
+  assert(excel.summary.orders[0].shipStatus === 'Entregado', 'se puede actualizar el estado de envío en Exel');
+  excel = api.deleteExcelOrder(excel.summary.orders[0].id);
+  assert(excel.summary.count === 0, 'se puede borrar un pedido de Exel');
+  assert(api.lookup('00002').status === 'salida' && api.accounting().dropi.balance === 80000, 'Exel no altera saldos ni pares al borrar');
+
   const saved = new DatabaseSync(file, { readOnly: true });
   const onDisk = Number(saved.prepare(`SELECT COUNT(*) AS n FROM pairs`).get().n);
   const stockOnDisk = Number(saved.prepare(`SELECT COUNT(*) AS n FROM pairs WHERE status IN ('inventario', 'prioridad')`).get().n);
