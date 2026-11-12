@@ -442,6 +442,7 @@ function listPairsFiltered(whereSql, params) {
 
 const EXCEL_SHEETS = ['Dropi', 'Articos', 'Evalook'];
 const EXCEL_SHIP_STATUSES = ['Enviado', 'Problema', 'Devolución', 'Entregado'];
+const EXCEL_TRANSPORTS = ['Interrapidisimo', 'Coordinadora', 'Envia', 'TCC'];
 const EXCEL_SHEET_CHANNEL = { Dropi: 'dropi', Articos: 'fabrica', Evalook: 'paginas' };
 
 function isExcelSheet(value) {
@@ -1118,6 +1119,9 @@ export const api = {
     const lastName = requiredText(input.lastName, 'El apellido', 60, 1);
     const guideNumber = cleanOptional(input.guideNumber, 60);
     const transport = cleanOptional(input.transport, 60);
+    if (!EXCEL_TRANSPORTS.includes(transport)) {
+      fail(400, 'La transportadora debe ser Interrapidisimo, Coordinadora, Envia o TCC.');
+    }
     const advisor = cleanOptional(input.advisor, 60);
     const costPrice = cleanMoney(input.costPrice ?? 0, 'El precio de fabricación');
     const salePrice = cleanMoney(input.salePrice ?? 0, 'El precio de venta');
@@ -1163,6 +1167,9 @@ export const api = {
     const lastName = requiredText(input.lastName ?? current.last_name, 'El apellido', 60, 1);
     const guideNumber = cleanOptional(input.guideNumber ?? current.guide_number, 60);
     const transport = cleanOptional(input.transport ?? current.transport, 60);
+    if (!EXCEL_TRANSPORTS.includes(transport)) {
+      fail(400, 'La transportadora debe ser Interrapidisimo, Coordinadora, Envia o TCC.');
+    }
     const advisor = cleanOptional(input.advisor ?? current.advisor, 60);
     const costPrice = cleanMoney(input.costPrice ?? current.cost_price, 'El precio de fabricación');
     const salePrice = cleanMoney(input.salePrice ?? current.sale_price, 'El precio de venta');

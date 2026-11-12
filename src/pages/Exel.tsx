@@ -12,6 +12,9 @@ import { useUi } from '../ui';
 import { PageHeader } from '../components/PageHeader';
 import { StatusPill } from '../components/StatusPill';
 
+const TRANSPORTS = ['Interrapidisimo', 'Coordinadora', 'Envia', 'TCC'] as const;
+type Transport = (typeof TRANSPORTS)[number];
+
 type FormState = {
   guideNumber: string;
   firstName: string;
@@ -25,6 +28,7 @@ type FormState = {
   orderDate: string;
   pairId: string;
   linkedCode: string;
+  personPick: string;
 };
 
 function todayBogota() {
@@ -45,12 +49,20 @@ function emptyForm(): FormState {
     orderDate: todayBogota(),
     pairId: '',
     linkedCode: '',
+    personPick: '',
   };
 }
 
 function moneyNumber(value: string) {
   const digits = String(value || '').replace(/\D/g, '');
   return digits ? Number(digits) : 0;
+}
+
+function normalizeTransport(value: string) {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  const hit = TRANSPORTS.find((item) => item.toLowerCase() === text.toLowerCase());
+  return hit || '';
 }
 
 function ShipStatusPill({ status }: { status: ExcelShipStatus }) {
@@ -89,9 +101,9 @@ export function Exel() {
 
   useEffect(() => { scanRef.current?.focus(); }, [sheet, scanNote]);
 
-  const profitPreview = useMemo(() => {
-    return moneyNumber(form.salePrice) - moneyNumber(form.costPrice) - moneyNumber(form.shippingPrice);
-  }, [form.salePrice, form.costPrice, form.shippingPrice]);
+  const profitPreview = useMemo(() => (
+    moneyNumber(form.salePrice) - moneyNumber(form.costPrice) - moneyNumber(form.shippingPrice)
+  ), [form.salePrice, form.costPrice, form.shippingPrice]);
 
   const filteredOrders = useMemo(() => {
     const rows = data?.summary.orders || [];
@@ -106,12 +118,16 @@ export function Exel() {
 
   function applyPerson(personId: string) {
     const person = data?.people.find((item) => item.id === personId);
-    if (!person) return;
+    if (!person) {
+      setForm((current) => ({ ...current, personPick: '' }));
+      return;
+    }
     setForm((current) => ({
       ...current,
+      personPick: personId,
       firstName: person.firstName,
       lastName: person.lastName,
-      transport: person.transport || current.transport,
+      transport: normalizeTransport(person.transport) || current.transport,
       advisor: person.advisor || current.advisor,
     }));
   }
@@ -122,7 +138,7 @@ export function Exel() {
       guideNumber: order.guideNumber,
       firstName: order.firstName,
       lastName: order.lastName,
-      transport: order.transport,
+      transport: normalizeTransport(order.transport),
       advisor: order.advisor,
       shipStatus: order.shipStatus,
       costPrice: String(order.costPrice || ''),
@@ -131,6 +147,7 @@ export function Exel() {
       orderDate: order.orderDate,
       pairId: order.pairId || '',
       linkedCode: order.qrCode || '',
+      personPick: order.personId || '',
     });
     setScanNote(order.qrCode ? `Editando pedido vinculado a ${order.qrCode}.` : 'Editando pedido.');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -156,7 +173,7 @@ export function Exel() {
         guideNumber: result.suggested.guideNumber || current.guideNumber,
         firstName: result.suggested.firstName || current.firstName,
         lastName: result.suggested.lastName || current.lastName,
-        transport: result.suggested.transport || current.transport,
+        transport: normalizeTransport(result.suggested.transport) || current.transport,
         advisor: result.suggested.advisor || current.advisor,
         shipStatus: result.suggested.shipStatus,
         costPrice: String(result.suggested.costPrice || current.costPrice || ''),
@@ -165,6 +182,7 @@ export function Exel() {
         orderDate: result.suggested.orderDate,
         pairId: result.suggested.pairId,
         linkedCode: result.pair.qrCode,
+        personPick: result.person?.id || current.personPick,
       }));
       setScanNote(result.suggested.message);
       notify(result.suggested.message, 'ok');
@@ -182,6 +200,10 @@ export function Exel() {
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (!form.transport) {
+      setError('Elige una transportadora: Interrapidisimo, Coordinadora, Envia o TCC.');
+      return;
+    }
     setBusy(true);
     setError('');
     try {
@@ -237,227 +259,218 @@ export function Exel() {
       <PageHeader
         eyebrow="Cuentas"
         title="Exel"
-        text="Digitaliza pedidos como en Contabilidad_zapatos.xlsx (Dropi, Articos y Evalook). Escanea el par para traer precio y, si ya existe, los datos de la persona."
+        text="Llena arriba como una fila nueva y ve la hoja completa abajo. Escanea el par para traer precio y datos de la persona sin mover inventario."
       />
 
-      <div className="filter-ranges exel-sheets" role="tablist" aria-label="Hojas del Excel">
-        {(data?.sheets || ['Dropi', 'Articos', 'Evalook']).map((name) => (
-          <button
-            key={name}
-            type="button"
-            className={`channel-${data?.sheetChannel[name] || ''} ${sheet === name ? 'active' : ''}`}
-            onClick={() => { setSheet(name); resetForm(); setError(''); }}
-          >
-            {name}
-          </button>
-        ))}
+      <div className="exel-toolbar">
+        <div className="filter-ranges exel-sheets" role="tablist" aria-label="Hojas del Excel">
+          {(data?.sheets || ['Dropi', 'Articos', 'Evalook']).map((name) => (
+            <button
+              key={name}
+              type="button"
+              className={`channel-${data?.sheetChannel[name] || ''} ${sheet === name ? 'active' : ''}`}
+              onClick={() => { setSheet(name); resetForm(); setError(''); }}
+            >
+              {name}
+            </button>
+          ))}
+        </div>
+        {data && (
+          <div className="exel-toolbar-meta">
+            <span>{data.summary.count} filas</span>
+            <strong>{formatMoney(data.summary.totalProfit)}</strong>
+            {channel && <small>Canal {channelLabel[channel]}</small>}
+          </div>
+        )}
       </div>
-
-      {channel && (
-        <p className="mode-note">
-          Hoja <strong>{sheet}</strong> · se acomoda con el canal de inventario <strong>{channelLabel[channel]}</strong>.
-          El escaneo aquí no saca ni devuelve pares: solo trae datos para digitalizar.
-        </p>
-      )}
 
       {error && <p className="form-error">{error}</p>}
 
-      {data && (
-        <section className="accounts-grid exel-kpis">
-          <article className={`panel account-card ${channel}`}>
-            <header className="panel-head"><h2>Pedidos</h2><span>{data.summary.count}</span></header>
-            <p className="muted">Registros en {sheet}</p>
-          </article>
-          <article className={`panel account-card ${channel}`}>
-            <header className="panel-head"><h2>Total ganancias</h2></header>
-            <p className="exel-total">{formatMoney(data.summary.totalProfit)}</p>
-            <p className="muted">Venta − fabricación − envío</p>
-          </article>
-          <article className="panel">
-            <header className="panel-head"><h2>Estados</h2></header>
-            <div className="exel-status-row">
-              {data.shipStatuses.map((status) => (
-                <div key={status}>
-                  <ShipStatusPill status={status} />
-                  <strong>{data.summary.byStatus[status] || 0}</strong>
-                </div>
-              ))}
-            </div>
-          </article>
-        </section>
-      )}
-
-      <section className="split scanner-grid">
-        <article className="panel">
-          <header className="panel-head">
-            <h2>{editingId ? 'Editar pedido' : 'Digitalizar pedido'}</h2>
+      <section className="panel exel-entry">
+        <header className="panel-head">
+          <h2>{editingId ? 'Editar fila' : 'Nueva fila'}</h2>
+          <div className="exel-entry-tags">
             {form.linkedCode && <StatusPill status="salida" channel={channel} />}
-          </header>
+            {form.linkedCode && <span className="pill inventario">Par {form.linkedCode}</span>}
+          </div>
+        </header>
 
-          <form
-            className="form-grid"
-            onSubmit={(event) => { event.preventDefault(); void handleScan(); }}
-          >
+        <form
+          className="exel-scan-row"
+          onSubmit={(event) => { event.preventDefault(); void handleScan(); }}
+        >
+          <label className="field">
+            <span>Escanear par</span>
+            <input
+              ref={scanRef}
+              value={scanCode}
+              onChange={(event) => setScanCode(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key !== 'Enter') return;
+                event.preventDefault();
+                void handleScan(scanCode);
+              }}
+              placeholder="Pistola o código del par"
+              autoComplete="off"
+              disabled={busy}
+            />
+          </label>
+          <button className="btn primary" type="submit" disabled={busy}>Traer datos</button>
+          {!!data?.people.length && (
             <label className="field">
-              <span>Escanear par</span>
-              <input
-                ref={scanRef}
-                value={scanCode}
-                onChange={(event) => setScanCode(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key !== 'Enter') return;
-                  event.preventDefault();
-                  void handleScan(scanCode);
-                }}
-                placeholder="Pistola o código del par"
-                autoComplete="off"
-                disabled={busy}
-              />
-            </label>
-            <div className="form-actions">
-              <button className="btn primary" type="submit" disabled={busy}>
-                Traer datos
-              </button>
-            </div>
-          </form>
-          {scanNote && <p className="scan-result ok compact-note"><span>{scanNote}</span></p>}
-          {form.linkedCode && (
-            <p className="muted">
-              Par vinculado: <strong>{form.linkedCode}</strong>
-            </p>
-          )}
-
-          <form className="form-grid" onSubmit={submit}>
-            {!!data?.people.length && (
-              <label className="field">
-                <span>Persona guardada</span>
-                <select defaultValue="" onChange={(event) => applyPerson(event.target.value)}>
-                  <option value="">Elegir para rellenar nombre…</option>
-                  {data.people.map((person) => (
-                    <option key={person.id} value={person.id}>
-                      {person.firstName} {person.lastName}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-            <label className="field">
-              <span>Número de guía</span>
-              <input value={form.guideNumber} onChange={(event) => setForm({ ...form, guideNumber: event.target.value })} placeholder="Guía o tracking" />
-            </label>
-            <label className="field">
-              <span>Nombres</span>
-              <input value={form.firstName} onChange={(event) => setForm({ ...form, firstName: event.target.value })} required />
-            </label>
-            <label className="field">
-              <span>Apellidos</span>
-              <input value={form.lastName} onChange={(event) => setForm({ ...form, lastName: event.target.value })} required />
-            </label>
-            <label className="field">
-              <span>Transportadora</span>
-              <input value={form.transport} onChange={(event) => setForm({ ...form, transport: event.target.value })} placeholder="Interrapidisimo, Servientrega…" />
-            </label>
-            <label className="field">
-              <span>Asesora</span>
-              <input value={form.advisor} onChange={(event) => setForm({ ...form, advisor: event.target.value })} />
-            </label>
-            <label className="field">
-              <span>Estado de envío</span>
-              <select value={form.shipStatus} onChange={(event) => setForm({ ...form, shipStatus: event.target.value as ExcelShipStatus })}>
-                {(data?.shipStatuses || ['Enviado', 'Problema', 'Devolución', 'Entregado']).map((status) => (
-                  <option key={status} value={status}>{status}</option>
+              <span>Persona guardada</span>
+              <select value={form.personPick} onChange={(event) => applyPerson(event.target.value)}>
+                <option value="">Elegir para rellenar nombre…</option>
+                {data.people.map((person) => (
+                  <option key={person.id} value={person.id}>
+                    {person.firstName} {person.lastName}
+                  </option>
                 ))}
               </select>
             </label>
-            <label className="field">
-              <span>Precio fabricación</span>
-              <input inputMode="numeric" value={form.costPrice} onChange={(event) => setForm({ ...form, costPrice: event.target.value.replace(/\D/g, '') })} placeholder="0" />
-            </label>
-            <label className="field">
-              <span>Precio venta</span>
-              <input inputMode="numeric" value={form.salePrice} onChange={(event) => setForm({ ...form, salePrice: event.target.value.replace(/\D/g, '') })} placeholder="0" required />
-            </label>
-            <label className="field">
-              <span>Precio de envío</span>
-              <input inputMode="numeric" value={form.shippingPrice} onChange={(event) => setForm({ ...form, shippingPrice: event.target.value.replace(/\D/g, '') })} placeholder="0" />
-            </label>
-            <label className="field">
-              <span>Fecha</span>
-              <input type="date" value={form.orderDate} onChange={(event) => setForm({ ...form, orderDate: event.target.value })} required />
-            </label>
-            <label className="field">
-              <span>Ganancia por pedido</span>
-              <input value={formatMoney(profitPreview)} readOnly />
-            </label>
-            <div className="form-actions">
-              <button className="btn primary" type="submit" disabled={busy}>
-                {busy ? 'Guardando…' : editingId ? 'Guardar cambios' : 'Guardar pedido'}
-              </button>
-              {editingId && (
-                <button className="btn ghost" type="button" onClick={resetForm} disabled={busy}>
-                  Cancelar edición
-                </button>
-              )}
-            </div>
-          </form>
-        </article>
-
-        <article className="panel">
-          <header className="panel-head">
-            <h2>Registros · {sheet}</h2>
-            <span>{filteredOrders.length}</span>
-          </header>
-          <label className="field">
-            <span>Buscar</span>
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Nombre, guía, código…" />
-          </label>
-          <div className="table-wrap">
-            <table className="data">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Guía</th>
-                  <th>Persona</th>
-                  <th>Estado</th>
-                  <th>Venta</th>
-                  <th>Ganancia</th>
-                  <th>Fecha</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {!filteredOrders.length && (
-                  <tr><td colSpan={8}>Todavía no hay pedidos digitalizados en {sheet}.</td></tr>
-                )}
-                {filteredOrders.map((order, index) => (
-                  <tr key={order.id} className={index % 2 ? 'exel-alt' : undefined}>
-                    <td>{order.qrCode || order.id.slice(0, 8)}</td>
-                    <td>{order.guideNumber || '—'}</td>
-                    <td>
-                      <strong>{order.firstName} {order.lastName}</strong>
-                      <div className="muted">{[order.transport, order.advisor].filter(Boolean).join(' · ') || 'Sin transportadora'}</div>
-                    </td>
-                    <td><ShipStatusPill status={order.shipStatus} /></td>
-                    <td className="money">{formatMoney(order.salePrice)}</td>
-                    <td className="money">{formatMoney(order.profit)}</td>
-                    <td>{order.orderDate}</td>
-                    <td>
-                      <div className="row-actions">
-                        <button type="button" className="btn ghost" onClick={() => loadOrder(order)}>Editar</button>
-                        <button type="button" className="btn danger" onClick={() => void removeOrder(order)} disabled={busy}>Borrar</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {data && (
-            <p className="exel-foot">
-              Total de ganancias en {sheet}: <strong>{formatMoney(data.summary.totalProfit)}</strong>
-            </p>
           )}
-        </article>
+        </form>
+        {scanNote && <p className="scan-result ok compact-note"><span>{scanNote}</span></p>}
+
+        <form className="exel-entry-grid" onSubmit={submit}>
+          <label className="field">
+            <span>Número de guía</span>
+            <input value={form.guideNumber} onChange={(event) => setForm({ ...form, guideNumber: event.target.value })} placeholder="Guía o tracking" />
+          </label>
+          <label className="field">
+            <span>Nombres</span>
+            <input value={form.firstName} onChange={(event) => setForm({ ...form, firstName: event.target.value })} required />
+          </label>
+          <label className="field">
+            <span>Apellidos</span>
+            <input value={form.lastName} onChange={(event) => setForm({ ...form, lastName: event.target.value })} required />
+          </label>
+          <label className="field">
+            <span>Transportadora</span>
+            <select
+              value={form.transport}
+              onChange={(event) => setForm({ ...form, transport: event.target.value as Transport | '' })}
+              required
+            >
+              <option value="">Seleccionar…</option>
+              {TRANSPORTS.map((item) => (
+                <option key={item} value={item}>{item}</option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span>Asesora</span>
+            <input value={form.advisor} onChange={(event) => setForm({ ...form, advisor: event.target.value })} />
+          </label>
+          <label className="field">
+            <span>Estado de envío</span>
+            <select value={form.shipStatus} onChange={(event) => setForm({ ...form, shipStatus: event.target.value as ExcelShipStatus })}>
+              {(data?.shipStatuses || ['Enviado', 'Problema', 'Devolución', 'Entregado']).map((status) => (
+                <option key={status} value={status}>{status}</option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span>Precio fabricación</span>
+            <input inputMode="numeric" value={form.costPrice} onChange={(event) => setForm({ ...form, costPrice: event.target.value.replace(/\D/g, '') })} placeholder="0" />
+          </label>
+          <label className="field">
+            <span>Precio venta</span>
+            <input inputMode="numeric" value={form.salePrice} onChange={(event) => setForm({ ...form, salePrice: event.target.value.replace(/\D/g, '') })} placeholder="0" required />
+          </label>
+          <label className="field">
+            <span>Precio de envío</span>
+            <input inputMode="numeric" value={form.shippingPrice} onChange={(event) => setForm({ ...form, shippingPrice: event.target.value.replace(/\D/g, '') })} placeholder="0" />
+          </label>
+          <label className="field">
+            <span>Fecha</span>
+            <input type="date" value={form.orderDate} onChange={(event) => setForm({ ...form, orderDate: event.target.value })} required />
+          </label>
+          <label className="field">
+            <span>Ganancia</span>
+            <input value={formatMoney(profitPreview)} readOnly />
+          </label>
+          <div className="exel-entry-actions">
+            <button className="btn primary" type="submit" disabled={busy}>
+              {busy ? 'Guardando…' : editingId ? 'Guardar cambios' : 'Agregar a la hoja'}
+            </button>
+            {editingId && (
+              <button className="btn ghost" type="button" onClick={resetForm} disabled={busy}>
+                Cancelar
+              </button>
+            )}
+          </div>
+        </form>
+      </section>
+
+      <section className="panel exel-sheet">
+        <header className="panel-head">
+          <h2>Hoja {sheet}</h2>
+          <label className="field exel-search">
+            <span className="sr-only">Buscar</span>
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar en la hoja…" />
+          </label>
+        </header>
+
+        <div className="exel-sheet-wrap">
+          <table className="data exel-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Número de guía</th>
+                <th>Nombres</th>
+                <th>Apellidos</th>
+                <th>Transportadora</th>
+                <th>Asesora</th>
+                <th>Estado de envío</th>
+                <th>Precio fabricación</th>
+                <th>Precio venta</th>
+                <th>Precio de envío</th>
+                <th>Fecha</th>
+                <th>Ganancia por pedido</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {!filteredOrders.length && (
+                <tr>
+                  <td colSpan={13}>Todavía no hay filas en {sheet}. Digita arriba y agrega a la hoja.</td>
+                </tr>
+              )}
+              {filteredOrders.map((order, index) => (
+                <tr key={order.id} className={index % 2 ? 'exel-alt' : undefined}>
+                  <td>{order.qrCode || order.id.slice(0, 8)}</td>
+                  <td>{order.guideNumber || '—'}</td>
+                  <td>{order.firstName}</td>
+                  <td>{order.lastName}</td>
+                  <td>{order.transport || '—'}</td>
+                  <td>{order.advisor || '—'}</td>
+                  <td><ShipStatusPill status={order.shipStatus} /></td>
+                  <td className="money">{formatMoney(order.costPrice)}</td>
+                  <td className="money">{formatMoney(order.salePrice)}</td>
+                  <td className="money">{formatMoney(order.shippingPrice)}</td>
+                  <td>{order.orderDate}</td>
+                  <td className="money">{formatMoney(order.profit)}</td>
+                  <td>
+                    <div className="row-actions">
+                      <button type="button" className="btn ghost" onClick={() => loadOrder(order)}>Editar</button>
+                      <button type="button" className="btn danger" onClick={() => void removeOrder(order)} disabled={busy}>Borrar</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            {!!filteredOrders.length && data && (
+              <tfoot>
+                <tr>
+                  <td colSpan={11}>Total de ganancias</td>
+                  <td className="money"><strong>{formatMoney(data.summary.totalProfit)}</strong></td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            )}
+          </table>
+        </div>
       </section>
     </div>
   );
