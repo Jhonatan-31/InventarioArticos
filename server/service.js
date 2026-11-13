@@ -452,10 +452,10 @@ function listPairsFiltered(whereSql, params) {
   `).all(...params).map(mapPair);
 }
 
-const EXCEL_SHEETS = ['Dropi', 'Articos', 'Evalook'];
+const EXCEL_SHEETS = ['Dropi', 'Articos', 'Evalook', 'Luci Bot'];
 const EXCEL_SHIP_STATUSES = ['Enviado', 'Problema', 'Devolución', 'Entregado'];
 const EXCEL_TRANSPORTS = ['Interrapidisimo', 'Coordinadora', 'Envia', 'TCC'];
-const EXCEL_SHEET_CHANNEL = { Dropi: 'dropi', Articos: 'fabrica', Evalook: 'paginas' };
+const EXCEL_SHEET_CHANNEL = { Dropi: 'dropi', Articos: 'fabrica', Evalook: 'paginas', 'Luci Bot': 'paginas' };
 
 function isExcelSheet(value) {
   return EXCEL_SHEETS.includes(String(value || ''));
@@ -567,7 +567,7 @@ function upsertExcelPerson(firstName, lastName, transport, advisor, phone = '') 
 }
 
 function listExcelOrders(sheet) {
-  if (!isExcelSheet(sheet)) fail(400, 'La hoja debe ser Dropi, Articos o Evalook.');
+  if (!isExcelSheet(sheet)) fail(400, 'La hoja debe ser Dropi, Articos, Evalook o Luci Bot.');
   return db.prepare(`
     ${EXCEL_ORDER_SELECT}
     WHERE o.sheet = ?
@@ -1080,7 +1080,7 @@ export const api = {
 
   /** Solo lectura: no cambia inventario. Trae par + persona previa si existe. */
   excelScan(code, sheet) {
-    if (!isExcelSheet(sheet)) fail(400, 'La hoja debe ser Dropi, Articos o Evalook.');
+    if (!isExcelSheet(sheet)) fail(400, 'La hoja debe ser Dropi, Articos, Evalook o Luci Bot.');
     const pair = findPairByScan(code);
     if (!pair) fail(404, 'No encontré un par con ese código de barras.');
     const preferredChannel = EXCEL_SHEET_CHANNEL[sheet];
@@ -1133,7 +1133,7 @@ export const api = {
   },
 
   createExcelOrder(input = {}) {
-    if (!isExcelSheet(input.sheet)) fail(400, 'La hoja debe ser Dropi, Articos o Evalook.');
+    if (!isExcelSheet(input.sheet)) fail(400, 'La hoja debe ser Dropi, Articos, Evalook o Luci Bot.');
     if (!isShipStatus(input.shipStatus)) {
       fail(400, 'El estado de envío debe ser Enviado, Problema, Devolución o Entregado.');
     }
@@ -1180,7 +1180,7 @@ export const api = {
     const current = db.prepare(`SELECT * FROM excel_orders WHERE id = ?`).get(String(id));
     if (!current) fail(404, 'El pedido del Excel no existe.');
     const sheet = input.sheet != null ? input.sheet : current.sheet;
-    if (!isExcelSheet(sheet)) fail(400, 'La hoja debe ser Dropi, Articos o Evalook.');
+    if (!isExcelSheet(sheet)) fail(400, 'La hoja debe ser Dropi, Articos, Evalook o Luci Bot.');
     const shipStatus = input.shipStatus != null ? input.shipStatus : current.ship_status;
     if (!isShipStatus(shipStatus)) {
       fail(400, 'El estado de envío debe ser Enviado, Problema, Devolución o Entregado.');

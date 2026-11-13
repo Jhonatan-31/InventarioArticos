@@ -175,6 +175,22 @@ try {
   assert(beforeRev !== afterRev && Boolean(afterRev), 'cada cambio de Exel publica una revisión para sincronizar sesiones');
   api.deleteExcelOrder(api.excelData('Evalook').summary.orders[0].id);
 
+  const luci = api.createExcelOrder({
+    sheet: 'Luci Bot',
+    guideNumber: 'LB-1',
+    firstName: 'Camila',
+    lastName: 'Lopez',
+    transport: 'Envia',
+    advisor: 'Luci Bot',
+    shipStatus: 'Enviado',
+    costPrice: 12000,
+    salePrice: 50000,
+    shippingPrice: 8000,
+    orderDate: '2026-11-12',
+  });
+  assert(luci.currentSheet === 'Luci Bot' && luci.summary.count === 1, 'existe la hoja Luci Bot para digitalizar');
+  api.deleteExcelOrder(luci.summary.orders[0].id);
+
   const saved = new DatabaseSync(file, { readOnly: true });
   const onDisk = Number(saved.prepare(`SELECT COUNT(*) AS n FROM pairs`).get().n);
   const stockOnDisk = Number(saved.prepare(`SELECT COUNT(*) AS n FROM pairs WHERE status IN ('inventario', 'prioridad')`).get().n);

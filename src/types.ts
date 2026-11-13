@@ -184,7 +184,7 @@ export interface AccountingData {
   payments: Payment[];
 }
 
-export type ExcelSheet = 'Dropi' | 'Articos' | 'Evalook';
+export type ExcelSheet = 'Dropi' | 'Articos' | 'Evalook' | 'Luci Bot';
 export type ExcelShipStatus = 'Enviado' | 'Problema' | 'Devolución' | 'Entregado';
 
 export interface ExcelPerson {

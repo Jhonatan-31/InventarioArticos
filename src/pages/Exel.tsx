@@ -106,7 +106,7 @@ function shipStatusClass(status: ExcelShipStatus) {
 }
 
 function readSheet(value: string | null): ExcelSheet {
-  if (value === 'Dropi' || value === 'Articos' || value === 'Evalook') return value;
+  if (value === 'Dropi' || value === 'Articos' || value === 'Evalook' || value === 'Luci Bot') return value;
   return 'Dropi';
 }
 
@@ -424,7 +424,7 @@ export function Exel() {
 
       <div className="exel-toolbar">
         <div className="filter-ranges exel-sheets" role="tablist" aria-label="Hojas del Excel">
-          {(data?.sheets || ['Dropi', 'Articos', 'Evalook']).map((name) => (
+          {(data?.sheets || ['Dropi', 'Articos', 'Evalook', 'Luci Bot']).map((name) => (
             <button
               key={name}
               type="button"

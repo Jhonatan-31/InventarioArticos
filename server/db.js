@@ -82,6 +82,44 @@ function migratePaymentsChannels() {
   `);
 }
 
+function migrateExcelSheetsLuciBot() {
+  const row = database.prepare(`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'excel_orders'`).get();
+  const sql = String(row?.sql || '');
+  if (!sql || sql.includes("'Luci Bot'")) return;
+  database.exec(`
+    CREATE TABLE excel_orders_mig (
+      id TEXT PRIMARY KEY,
+      sheet TEXT NOT NULL CHECK (sheet IN ('Dropi', 'Articos', 'Evalook', 'Luci Bot')),
+      guide_number TEXT NOT NULL DEFAULT '',
+      first_name TEXT NOT NULL DEFAULT '',
+      last_name TEXT NOT NULL DEFAULT '',
+      transport TEXT NOT NULL DEFAULT '',
+      advisor TEXT NOT NULL DEFAULT '',
+      ship_status TEXT NOT NULL CHECK (ship_status IN ('Enviado', 'Problema', 'Devolución', 'Entregado')),
+      cost_price INTEGER NOT NULL DEFAULT 0,
+      sale_price INTEGER NOT NULL DEFAULT 0,
+      shipping_price INTEGER NOT NULL DEFAULT 0,
+      order_date TEXT NOT NULL,
+      pair_id TEXT REFERENCES pairs(id),
+      person_id TEXT REFERENCES excel_people(id),
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    INSERT INTO excel_orders_mig (
+      id, sheet, guide_number, first_name, last_name, transport, advisor, ship_status,
+      cost_price, sale_price, shipping_price, order_date, pair_id, person_id, created_at, updated_at
+    )
+    SELECT
+      id, sheet, guide_number, first_name, last_name, transport, advisor, ship_status,
+      cost_price, sale_price, shipping_price, order_date, pair_id, person_id, created_at, updated_at
+    FROM excel_orders;
+    DROP TABLE excel_orders;
+    ALTER TABLE excel_orders_mig RENAME TO excel_orders;
+    CREATE INDEX IF NOT EXISTS idx_excel_orders_sheet ON excel_orders(sheet, order_date DESC);
+    CREATE INDEX IF NOT EXISTS idx_excel_orders_pair ON excel_orders(pair_id);
+  `);
+}
+
 /** Una sola vez: borra pares y movimientos, conserva referencias. */
 function wipeStockKeepRefsOnce() {
   const key = 'wipe_stock_keep_refs_20261107';
@@ -200,7 +238,7 @@ export function getDb() {
     );
     CREATE TABLE IF NOT EXISTS excel_orders (
       id TEXT PRIMARY KEY,
-      sheet TEXT NOT NULL CHECK (sheet IN ('Dropi', 'Articos', 'Evalook')),
+      sheet TEXT NOT NULL CHECK (sheet IN ('Dropi', 'Articos', 'Evalook', 'Luci Bot')),
       guide_number TEXT NOT NULL DEFAULT '',
       first_name TEXT NOT NULL DEFAULT '',
       last_name TEXT NOT NULL DEFAULT '',
@@ -220,6 +258,7 @@ export function getDb() {
     CREATE INDEX IF NOT EXISTS idx_excel_orders_pair ON excel_orders(pair_id);
     CREATE INDEX IF NOT EXISTS idx_excel_people_name ON excel_people(last_name, first_name);
   `);
+  migrateExcelSheetsLuciBot();
   database.exec(`
     UPDATE pairs
     SET size = (
