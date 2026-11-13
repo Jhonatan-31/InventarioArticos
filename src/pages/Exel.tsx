@@ -141,6 +141,26 @@ function shipStatusClass(status: ExcelShipStatus) {
   return 'ship-enviado';
 }
 
+function orderRefLines(order: ExcelOrder) {
+  if (order.refs?.length) {
+    return order.refs.map((item) => ({
+      key: `${item.referenceId}-${item.code}-${item.color}`,
+      code: item.code,
+      color: item.color,
+      pairs: item.pairs,
+    }));
+  }
+  if (order.referenceCode) {
+    return [{
+      key: `${order.pairId || order.id}-pair`,
+      code: order.referenceCode,
+      color: order.pairColor || '',
+      pairs: 1,
+    }];
+  }
+  return [];
+}
+
 function readSheet(value: string | null): ExcelSheet {
   if (value === 'Dropi' || value === 'Articos' || value === 'Evalook' || value === 'Luci Bot') return value;
   return 'Dropi';
@@ -248,7 +268,10 @@ export function Exel() {
       if (appliedFrom && row.orderDate < appliedFrom) return false;
       if (appliedTo && row.orderDate > appliedTo) return false;
       if (!q) return true;
-      return `${row.guideNumber} ${row.firstName} ${row.lastName} ${row.transport} ${row.advisor} ${row.qrCode || ''} ${row.shipStatus}`
+      const refsText = orderRefLines(row)
+        .map((item) => `${item.code} ${item.color} ${item.pairs}`)
+        .join(' ');
+      return `${row.guideNumber} ${row.firstName} ${row.lastName} ${row.city} ${row.department} ${row.transport} ${row.advisor} ${row.qrCode || ''} ${row.shipStatus} ${refsText}`
         .toLowerCase()
         .includes(q);
     });
@@ -873,6 +896,7 @@ export function Exel() {
                 <th>Número de guía</th>
                 <th>Nombres</th>
                 <th>Apellidos</th>
+                <th>Referencias</th>
                 <th>Ciudad</th>
                 <th>Departamento</th>
                 <th>Transportadora</th>
@@ -889,10 +913,13 @@ export function Exel() {
             <tbody>
               {!filteredOrders.length && (
                 <tr>
-                  <td colSpan={15}>No hay filas con estos filtros en {sheet}.</td>
+                  <td colSpan={16}>No hay filas con estos filtros en {sheet}.</td>
                 </tr>
               )}
-              {filteredOrders.map((order, index) => (
+              {filteredOrders.map((order, index) => {
+                const refs = orderRefLines(order);
+                const totalPairs = refs.reduce((sum, item) => sum + Number(item.pairs || 0), 0);
+                return (
                 <tr
                   key={order.id}
                   className={[
@@ -904,6 +931,24 @@ export function Exel() {
                   <td>{order.guideNumber || '—'}</td>
                   <td>{order.firstName}</td>
                   <td>{order.lastName}</td>
+                  <td className="exel-col-refs">
+                    {!refs.length ? (
+                      <span className="exel-refs-none">—</span>
+                    ) : (
+                      <div className="exel-refs-cell">
+                        {refs.map((item) => (
+                          <div className="exel-ref-chip" key={item.key} title={`${item.code}${item.color ? ` · ${item.color}` : ''} · ${item.pairs} par${item.pairs === 1 ? '' : 'es'}`}>
+                            <span className="exel-ref-chip-code">{item.code}</span>
+                            {!!item.color && <span className="exel-ref-chip-color">{item.color}</span>}
+                            <span className="exel-ref-chip-pairs">{item.pairs}p</span>
+                          </div>
+                        ))}
+                        {totalPairs > 0 && (
+                          <span className="exel-refs-total">{totalPairs} par{totalPairs === 1 ? '' : 'es'}</span>
+                        )}
+                      </div>
+                    )}
+                  </td>
                   <td>{order.city || '—'}</td>
                   <td>{order.department || '—'}</td>
                   <td>{order.transport || '—'}</td>
@@ -933,12 +978,13 @@ export function Exel() {
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
             {!!filteredOrders.length && (
               <tfoot>
                 <tr>
-                  <td colSpan={13}>Total de ganancias (filtro actual)</td>
+                  <td colSpan={14}>Total de ganancias (filtro actual)</td>
                   <td className={`money ${filteredProfit < 0 ? 'exel-loss' : ''}`}>
                     <strong>{formatMoney(filteredProfit)}</strong>
                   </td>

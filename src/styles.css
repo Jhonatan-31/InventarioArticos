@@ -611,10 +611,61 @@ a { color: var(--cognac-deep); }
   background: #fff;
 }
 .exel-table {
-  min-width: 1380px;
+  min-width: 1540px;
   border-collapse: separate;
   border-spacing: 0;
 }
+.exel-table .exel-col-refs {
+  min-width: 190px;
+  max-width: 260px;
+  vertical-align: middle;
+}
+.exel-refs-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+}
+.exel-ref-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #f3ebe2;
+  border: 1px solid #e4d5c4;
+  color: #5c3222;
+  font-size: 11px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.exel-ref-chip-code {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.exel-ref-chip-color {
+  color: #7a5645;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 92px;
+}
+.exel-ref-chip-pairs {
+  margin-left: 2px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #6e3220;
+  color: #fff8f3;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.exel-refs-total {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 650;
+  padding-left: 2px;
+}
+.exel-refs-none { color: var(--muted); }
 .exel-table th {
   background: #6e3220;
   color: #fff8f3;
