@@ -180,11 +180,13 @@ try {
     salePrice: 200000,
     shippingPrice: 10000,
     orderDate: '2026-11-13',
-    refs: [{ referenceId: oxford.id, pairs: 2 }],
+    refs: [{ referenceId: oxford.id, pairs: 2, size: '40' }],
   });
   assert(
-    withRefs.summary.orders[0].costPrice === 160000 && withRefs.summary.orders[0].refs.length === 1,
-    'Exel suma fabricación con referencias y pares',
+    withRefs.summary.orders[0].costPrice === 160000
+      && withRefs.summary.orders[0].refs.length === 1
+      && withRefs.summary.orders[0].refs[0].size === '40',
+    'Exel suma fabricación con referencias, pares y talla',
   );
   api.deleteExcelOrder(withRefs.summary.orders[0].id);
   const again = api.excelScan('00002', 'Dropi');

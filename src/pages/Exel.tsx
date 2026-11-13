@@ -15,7 +15,7 @@ import {
   resolveDateRange,
   resolveMonthRange,
 } from '../dateFilterEnter';
-import { channelLabel, formatMoney } from '../format';
+import { SHOE_SIZES, channelLabel, formatMoney } from '../format';
 
 function formatSheetDate(value: string) {
   const text = String(value || '').trim();
@@ -49,6 +49,7 @@ type RefLineForm = {
   key: string;
   referenceId: string;
   pairs: string;
+  size: string;
 };
 
 type FormState = {
@@ -74,11 +75,12 @@ function todayBogota() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(new Date());
 }
 
-function newRefLine(referenceId = '', pairs = '1'): RefLineForm {
+function newRefLine(referenceId = '', pairs = '1', size = ''): RefLineForm {
   return {
     key: crypto.randomUUID(),
     referenceId,
     pairs,
+    size,
   };
 }
 
@@ -105,7 +107,7 @@ function emptyForm(): FormState {
 
 function refsToFormLines(refs: ExcelRefLine[] | undefined): RefLineForm[] {
   if (!refs?.length) return [newRefLine()];
-  return refs.map((item) => newRefLine(item.referenceId, String(item.pairs || 1)));
+  return refs.map((item) => newRefLine(item.referenceId, String(item.pairs || 1), item.size || ''));
 }
 
 function fabricationFromLines(lines: RefLineForm[], references: Reference[]) {
@@ -144,9 +146,10 @@ function shipStatusClass(status: ExcelShipStatus) {
 function orderRefLines(order: ExcelOrder) {
   if (order.refs?.length) {
     return order.refs.map((item) => ({
-      key: `${item.referenceId}-${item.code}-${item.color}`,
+      key: `${item.referenceId}-${item.code}-${item.color}-${item.size}`,
       code: item.code,
       color: item.color,
+      size: item.size || '',
       pairs: item.pairs,
     }));
   }
@@ -155,6 +158,7 @@ function orderRefLines(order: ExcelOrder) {
       key: `${order.pairId || order.id}-pair`,
       code: order.referenceCode,
       color: order.pairColor || '',
+      size: order.pairSize || '',
       pairs: 1,
     }];
   }
@@ -269,7 +273,7 @@ export function Exel() {
       if (appliedTo && row.orderDate > appliedTo) return false;
       if (!q) return true;
       const refsText = orderRefLines(row)
-        .map((item) => `${item.code} ${item.color} ${item.pairs}`)
+        .map((item) => `${item.code} ${item.color} ${item.size} ${item.pairs}`)
         .join(' ');
       return `${row.guideNumber} ${row.firstName} ${row.lastName} ${row.city} ${row.department} ${row.transport} ${row.advisor} ${row.qrCode || ''} ${row.shipStatus} ${refsText}`
         .toLowerCase()
@@ -405,18 +409,19 @@ export function Exel() {
       const result = await excelScan(code, sheet);
       setForm((current) => {
         const refId = result.pair.referenceId;
+        const size = result.pair.size || '';
         let refLines = current.refLines;
         if (refId) {
-          const existing = refLines.find((line) => line.referenceId === refId);
+          const existing = refLines.find((line) => line.referenceId === refId && line.size === size);
           if (existing) {
             const pairs = Math.max(1, (Number(existing.pairs) || 0) + 1);
             refLines = refLines.map((line) => (
-              line.key === existing.key ? { ...line, pairs: String(pairs) } : line
+              line.key === existing.key ? { ...line, pairs: String(pairs), size: size || line.size } : line
             ));
           } else if (!refLines[0]?.referenceId && refLines.length === 1) {
-            refLines = [newRefLine(refId, '1')];
+            refLines = [newRefLine(refId, '1', size)];
           } else {
-            refLines = [...refLines.filter((line) => line.referenceId), newRefLine(refId, '1')];
+            refLines = [...refLines.filter((line) => line.referenceId), newRefLine(refId, '1', size)];
           }
         }
         return {
@@ -456,15 +461,20 @@ export function Exel() {
       setError('Elige una transportadora: Interrapidisimo, Coordinadora, Envia o TCC.');
       return;
     }
+    const refsPayload = form.refLines
+      .filter((line) => line.referenceId)
+      .map((line) => ({
+        referenceId: line.referenceId,
+        pairs: Math.max(1, Number(String(line.pairs || '').replace(/\D/g, '')) || 1),
+        size: line.size,
+      }));
+    if (refsPayload.some((line) => !line.size)) {
+      setError('Elige la talla de cada referencia.');
+      return;
+    }
     setBusy(true);
     setError('');
     try {
-      const refsPayload = form.refLines
-        .filter((line) => line.referenceId)
-        .map((line) => ({
-          referenceId: line.referenceId,
-          pairs: Math.max(1, Number(String(line.pairs || '').replace(/\D/g, '')) || 1),
-        }));
       const payload = {
         sheet,
         guideNumber: form.guideNumber,
@@ -619,7 +629,7 @@ export function Exel() {
           <div className="exel-refs-head">
             <div>
               <h3>Referencias del pedido</h3>
-              <p>Elige referencias guardadas y la cantidad de pares. El precio de fabricación se suma solo.</p>
+              <p>Elige referencias guardadas, la talla y la cantidad de pares. El precio de fabricación se suma solo.</p>
             </div>
             <button className="btn ghost" type="button" onClick={addRefLine} disabled={busy || !references.length}>
               Agregar referencia
@@ -659,6 +669,20 @@ export function Exel() {
                       onChange={(event) => updateRefLine(line.key, { pairs: event.target.value.replace(/\D/g, '') })}
                       placeholder="1"
                     />
+                  </label>
+                  <label className="field exel-ref-size">
+                    <span>Talla</span>
+                    <select
+                      value={line.size}
+                      disabled={busy}
+                      onChange={(event) => updateRefLine(line.key, { size: event.target.value })}
+                      required={!!line.referenceId}
+                    >
+                      <option value="">Elegir…</option>
+                      {SHOE_SIZES.map((size) => (
+                        <option key={size} value={size}>{size}</option>
+                      ))}
+                    </select>
                   </label>
                   <label className="field exel-ref-unit">
                     <span>Precio ref.</span>
@@ -937,9 +961,10 @@ export function Exel() {
                     ) : (
                       <div className="exel-refs-cell">
                         {refs.map((item) => (
-                          <div className="exel-ref-chip" key={item.key} title={`${item.code}${item.color ? ` · ${item.color}` : ''} · ${item.pairs} par${item.pairs === 1 ? '' : 'es'}`}>
+                          <div className="exel-ref-chip" key={item.key} title={`${item.code}${item.color ? ` · ${item.color}` : ''}${item.size ? ` · talla ${item.size}` : ''} · ${item.pairs} par${item.pairs === 1 ? '' : 'es'}`}>
                             <span className="exel-ref-chip-code">{item.code}</span>
                             {!!item.color && <span className="exel-ref-chip-color">{item.color}</span>}
+                            {!!item.size && <span className="exel-ref-chip-size">T{item.size}</span>}
                             <span className="exel-ref-chip-pairs">{item.pairs}p</span>
                           </div>
                         ))}

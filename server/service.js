@@ -519,11 +519,15 @@ function cleanExcelRefs(input) {
     if (!ref) fail(400, 'Una de las referencias del pedido ya no existe.');
     const pairs = Math.max(1, Math.min(999, Number(item?.pairs || item?.quantity || 1) || 1));
     if (!Number.isInteger(pairs)) fail(400, 'La cantidad de pares debe ser un entero.');
+    const size = String(item?.size || '').trim();
+    if (!size) fail(400, 'Elige la talla de cada referencia del pedido.');
+    if (!SHOE_SIZES.includes(size)) fail(400, `La talla ${size} no está en la curva del 34 al 45.`);
     cleaned.push({
       referenceId: ref.id,
       code: ref.code,
       name: ref.name,
       color: ref.color || '',
+      size,
       price: Number(ref.price || 0),
       pairs,
       lineTotal: Number(ref.price || 0) * pairs,
@@ -542,6 +546,7 @@ function mapExcelOrder(row) {
     code: String(item.code || ''),
     name: String(item.name || ''),
     color: String(item.color || ''),
+    size: String(item.size || ''),
     price: Number(item.price || 0),
     pairs: Number(item.pairs || item.quantity || 0) || 0,
     lineTotal: Number(item.lineTotal != null ? item.lineTotal : (Number(item.price || 0) * Number(item.pairs || item.quantity || 0))) || 0,

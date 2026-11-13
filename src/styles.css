@@ -518,7 +518,7 @@ a { color: var(--cognac-deep); }
 }
 .exel-ref-row {
   display: grid;
-  grid-template-columns: minmax(220px, 2.2fr) 90px 120px 120px auto;
+  grid-template-columns: minmax(200px, 2fr) 84px 96px 110px 110px auto;
   gap: 10px;
   align-items: end;
   padding: 10px;
@@ -664,6 +664,14 @@ a { color: var(--cognac-deep); }
   text-overflow: ellipsis;
   max-width: 92px;
 }
+.exel-ref-chip-size {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #efe4d8;
+  color: #6e3220;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
 .exel-ref-chip-pairs {
   margin-left: 2px;
   padding: 1px 6px;
@@ -800,7 +808,7 @@ a { color: var(--cognac-deep); }
   .exel-entry-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .exel-scan-row { grid-template-columns: 1fr auto; }
   .exel-scan-row .field:last-child { grid-column: 1 / -1; }
-  .exel-ref-row { grid-template-columns: 1fr 1fr; }
+  .exel-ref-row { grid-template-columns: 1fr 1fr 1fr; }
   .exel-ref-pick { grid-column: 1 / -1; }
   .exel-ref-remove { grid-column: 1 / -1; width: 100%; }
 }

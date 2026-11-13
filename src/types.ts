@@ -202,6 +202,7 @@ export interface ExcelRefLine {
   code: string;
   name: string;
   color: string;
+  size: string;
   price: number;
   pairs: number;
   lineTotal: number;
@@ -289,7 +290,7 @@ export interface ExcelOrderInput {
   orderDate: string;
   city?: string;
   department?: string;
-  refs?: Array<{ referenceId: string; pairs: number }>;
+  refs?: Array<{ referenceId: string; pairs: number; size?: string }>;
   pairId?: string | null;
   code?: string;
   phone?: string;
