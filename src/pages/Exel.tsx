@@ -35,13 +35,21 @@ function formatPersonName(value: string) {
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
     .join(' ');
 }
-import type { ExcelModuleData, ExcelOrder, ExcelSheet, ExcelShipStatus } from '../types';
+import type { ExcelModuleData, ExcelOrder, ExcelRefLine, ExcelSheet, ExcelShipStatus, Reference } from '../types';
 import { useUi } from '../ui';
 import { PageHeader } from '../components/PageHeader';
 import { StatusPill } from '../components/StatusPill';
+import { CityPicker } from '../components/CityPicker';
+import { findColombiaCity } from '../data/colombia';
 
 const TRANSPORTS = ['Interrapidisimo', 'Coordinadora', 'Envia', 'TCC'] as const;
 type Transport = (typeof TRANSPORTS)[number];
+
+type RefLineForm = {
+  key: string;
+  referenceId: string;
+  pairs: string;
+};
 
 type FormState = {
   guideNumber: string;
@@ -54,13 +62,24 @@ type FormState = {
   salePrice: string;
   shippingPrice: string;
   orderDate: string;
+  city: string;
+  department: string;
+  cityCode: string;
   pairId: string;
   linkedCode: string;
-  personPick: string;
+  refLines: RefLineForm[];
 };
 
 function todayBogota() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(new Date());
+}
+
+function newRefLine(referenceId = '', pairs = '1'): RefLineForm {
+  return {
+    key: crypto.randomUUID(),
+    referenceId,
+    pairs,
+  };
 }
 
 function emptyForm(): FormState {
@@ -75,10 +94,27 @@ function emptyForm(): FormState {
     salePrice: '',
     shippingPrice: '',
     orderDate: todayBogota(),
+    city: '',
+    department: '',
+    cityCode: '',
     pairId: '',
     linkedCode: '',
-    personPick: '',
+    refLines: [newRefLine()],
   };
+}
+
+function refsToFormLines(refs: ExcelRefLine[] | undefined): RefLineForm[] {
+  if (!refs?.length) return [newRefLine()];
+  return refs.map((item) => newRefLine(item.referenceId, String(item.pairs || 1)));
+}
+
+function fabricationFromLines(lines: RefLineForm[], references: Reference[]) {
+  return lines.reduce((sum, line) => {
+    const ref = references.find((item) => item.id === line.referenceId);
+    if (!ref) return sum;
+    const pairs = Math.max(0, Number(String(line.pairs || '').replace(/\D/g, '')) || 0);
+    return sum + ref.price * pairs;
+  }, 0);
 }
 
 function moneyNumber(value: string) {
@@ -161,14 +197,25 @@ export function Exel() {
     setError('');
   }
 
+  const references = data?.references || [];
+
+  const fabricationTotal = useMemo(
+    () => fabricationFromLines(form.refLines, references),
+    [form.refLines, references],
+  );
+
+  const costForProfit = form.refLines.some((line) => line.referenceId)
+    ? fabricationTotal
+    : moneyNumber(form.costPrice);
+
   const profitPreview = useMemo(() => (
     orderProfit(
-      moneyNumber(form.costPrice),
+      costForProfit,
       moneyNumber(form.salePrice),
       moneyNumber(form.shippingPrice),
       form.shipStatus,
     )
-  ), [form.salePrice, form.costPrice, form.shippingPrice, form.shipStatus]);
+  ), [form.salePrice, costForProfit, form.shippingPrice, form.shipStatus]);
 
   const advisorOptions = useMemo(() => {
     const names = new Set<string>();
@@ -182,6 +229,15 @@ export function Exel() {
     });
     return Array.from(names).sort((a, b) => a.localeCompare(b, 'es'));
   }, [data]);
+
+  useEffect(() => {
+    if (!form.refLines.some((line) => line.referenceId)) return;
+    setForm((current) => {
+      const nextCost = String(fabricationFromLines(current.refLines, references) || '');
+      if (current.costPrice === nextCost) return current;
+      return { ...current, costPrice: nextCost };
+    });
+  }, [form.refLines, references]);
 
   const filteredOrders = useMemo(() => {
     const rows = data?.summary.orders || [];
@@ -250,23 +306,33 @@ export function Exel() {
     setMonthPick('');
   }
 
-  function applyPerson(personId: string) {
-    const person = data?.people.find((item) => item.id === personId);
-    if (!person) {
-      setForm((current) => ({ ...current, personPick: '' }));
-      return;
-    }
+  function updateRefLine(key: string, patch: Partial<RefLineForm>) {
     setForm((current) => ({
       ...current,
-      personPick: personId,
-      firstName: person.firstName,
-      lastName: person.lastName,
-      transport: normalizeTransport(person.transport) || current.transport,
-      advisor: person.advisor || current.advisor,
+      refLines: current.refLines.map((line) => (line.key === key ? { ...line, ...patch } : line)),
+    }));
+  }
+
+  function addRefLine() {
+    setForm((current) => ({
+      ...current,
+      refLines: [...current.refLines, newRefLine()],
+    }));
+  }
+
+  function removeRefLine(key: string) {
+    setForm((current) => ({
+      ...current,
+      refLines: current.refLines.length <= 1
+        ? [newRefLine()]
+        : current.refLines.filter((line) => line.key !== key),
     }));
   }
 
   function loadOrder(order: ExcelOrder) {
+    const matched = order.city
+      ? findColombiaCity(`${order.city}, ${order.department}`) || findColombiaCity(order.city)
+      : null;
     setEditingId(order.id);
     setForm({
       guideNumber: order.guideNumber,
@@ -279,9 +345,12 @@ export function Exel() {
       salePrice: String(order.salePrice || ''),
       shippingPrice: String(order.shippingPrice || ''),
       orderDate: order.orderDate,
+      city: order.city || '',
+      department: order.department || '',
+      cityCode: matched?.code || '',
       pairId: order.pairId || '',
       linkedCode: order.qrCode || '',
-      personPick: order.personId || '',
+      refLines: refsToFormLines(order.refs),
     });
     setScanNote(order.qrCode ? `Editando pedido vinculado a ${order.qrCode}.` : 'Editando pedido.');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -311,22 +380,39 @@ export function Exel() {
     setError('');
     try {
       const result = await excelScan(code, sheet);
-      setForm((current) => ({
-        ...current,
-        guideNumber: result.suggested.guideNumber || current.guideNumber,
-        firstName: result.suggested.firstName || current.firstName,
-        lastName: result.suggested.lastName || current.lastName,
-        transport: normalizeTransport(result.suggested.transport) || current.transport,
-        advisor: result.suggested.advisor || current.advisor,
-        shipStatus: result.suggested.shipStatus,
-        costPrice: String(result.suggested.costPrice || current.costPrice || ''),
-        salePrice: String(result.suggested.salePrice || ''),
-        shippingPrice: String(result.suggested.shippingPrice || current.shippingPrice || ''),
-        orderDate: result.suggested.orderDate,
-        pairId: result.suggested.pairId,
-        linkedCode: result.pair.qrCode,
-        personPick: result.person?.id || current.personPick,
-      }));
+      setForm((current) => {
+        const refId = result.pair.referenceId;
+        let refLines = current.refLines;
+        if (refId) {
+          const existing = refLines.find((line) => line.referenceId === refId);
+          if (existing) {
+            const pairs = Math.max(1, (Number(existing.pairs) || 0) + 1);
+            refLines = refLines.map((line) => (
+              line.key === existing.key ? { ...line, pairs: String(pairs) } : line
+            ));
+          } else if (!refLines[0]?.referenceId && refLines.length === 1) {
+            refLines = [newRefLine(refId, '1')];
+          } else {
+            refLines = [...refLines.filter((line) => line.referenceId), newRefLine(refId, '1')];
+          }
+        }
+        return {
+          ...current,
+          guideNumber: result.suggested.guideNumber || current.guideNumber,
+          firstName: result.suggested.firstName || current.firstName,
+          lastName: result.suggested.lastName || current.lastName,
+          transport: normalizeTransport(result.suggested.transport) || current.transport,
+          advisor: result.suggested.advisor || current.advisor,
+          shipStatus: result.suggested.shipStatus,
+          costPrice: String(fabricationFromLines(refLines, references) || result.suggested.costPrice || current.costPrice || ''),
+          salePrice: String(result.suggested.salePrice || ''),
+          shippingPrice: String(result.suggested.shippingPrice || current.shippingPrice || ''),
+          orderDate: result.suggested.orderDate,
+          pairId: result.suggested.pairId,
+          linkedCode: result.pair.qrCode,
+          refLines,
+        };
+      });
       setScanNote(result.suggested.message);
       notify(result.suggested.message, 'ok');
       if (!result.suggested.channelMatch && result.pair.channel) {
@@ -350,6 +436,12 @@ export function Exel() {
     setBusy(true);
     setError('');
     try {
+      const refsPayload = form.refLines
+        .filter((line) => line.referenceId)
+        .map((line) => ({
+          referenceId: line.referenceId,
+          pairs: Math.max(1, Number(String(line.pairs || '').replace(/\D/g, '')) || 1),
+        }));
       const payload = {
         sheet,
         guideNumber: form.guideNumber,
@@ -358,10 +450,13 @@ export function Exel() {
         transport: form.transport,
         advisor: form.advisor,
         shipStatus: form.shipStatus,
-        costPrice: moneyNumber(form.costPrice),
+        costPrice: refsPayload.length ? fabricationTotal : moneyNumber(form.costPrice),
         salePrice: moneyNumber(form.salePrice),
         shippingPrice: moneyNumber(form.shippingPrice),
         orderDate: form.orderDate,
+        city: form.city,
+        department: form.department,
+        refs: refsPayload,
         pairId: form.pairId || null,
       };
       const next = editingId
@@ -428,7 +523,7 @@ export function Exel() {
       <PageHeader
         eyebrow="Cuentas"
         title="Exel"
-        text="Llena arriba como una fila nueva y ve la hoja completa abajo. Escanea el par para traer precio y datos de la persona sin mover inventario."
+        text="Llena arriba como una fila nueva y ve la hoja completa abajo. Escanea el par, arma las referencias con pares para el costo de fabricación y elige la ciudad de Colombia sin mover inventario."
       />
 
       <div className="exel-toolbar">
@@ -465,7 +560,7 @@ export function Exel() {
         </header>
 
         <form
-          className="exel-scan-row"
+          className="exel-scan-row exel-scan-row-slim"
           onSubmit={(event) => { event.preventDefault(); void handleScan(); }}
         >
           <label className="field">
@@ -485,30 +580,89 @@ export function Exel() {
             />
           </label>
           <button className="btn primary" type="submit" disabled={busy}>Traer datos</button>
-          {!!data?.people.length && (
-            <label className="field">
-              <span>Persona guardada</span>
-              <select value={form.personPick} onChange={(event) => applyPerson(event.target.value)}>
-                <option value="">Elegir para rellenar nombre…</option>
-                {data.people.map((person) => (
-                  <option key={person.id} value={person.id}>
-                    {person.firstName} {person.lastName}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
           <button
             className="btn ghost"
             type="button"
             disabled={busy}
             onClick={clearBroughtData}
-            title="Limpia persona, guía, precios y datos traídos"
+            title="Limpia guía, referencias, precios y datos traídos"
           >
             Limpiar datos
           </button>
         </form>
         {scanNote && <p className="scan-result ok compact-note"><span>{scanNote}</span></p>}
+
+        <div className="exel-refs-block">
+          <div className="exel-refs-head">
+            <div>
+              <h3>Referencias del pedido</h3>
+              <p>Elige referencias guardadas y la cantidad de pares. El precio de fabricación se suma solo.</p>
+            </div>
+            <button className="btn ghost" type="button" onClick={addRefLine} disabled={busy || !references.length}>
+              Agregar referencia
+            </button>
+          </div>
+          {!references.length && (
+            <p className="muted exel-refs-empty">Aún no hay referencias creadas en el catálogo.</p>
+          )}
+          <div className="exel-refs-list">
+            {form.refLines.map((line, index) => {
+              const ref = references.find((item) => item.id === line.referenceId);
+              const pairs = Math.max(0, Number(String(line.pairs || '').replace(/\D/g, '')) || 0);
+              const lineTotal = ref ? ref.price * pairs : 0;
+              return (
+                <div className="exel-ref-row" key={line.key}>
+                  <label className="field exel-ref-pick">
+                    <span>Referencia {index + 1}</span>
+                    <select
+                      value={line.referenceId}
+                      disabled={busy || !references.length}
+                      onChange={(event) => updateRefLine(line.key, { referenceId: event.target.value })}
+                    >
+                      <option value="">Elegir referencia guardada…</option>
+                      {references.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.code} · {item.color} · {formatMoney(item.price)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="field exel-ref-pairs">
+                    <span>Pares</span>
+                    <input
+                      inputMode="numeric"
+                      value={line.pairs}
+                      disabled={busy}
+                      onChange={(event) => updateRefLine(line.key, { pairs: event.target.value.replace(/\D/g, '') })}
+                      placeholder="1"
+                    />
+                  </label>
+                  <label className="field exel-ref-unit">
+                    <span>Precio ref.</span>
+                    <input value={ref ? formatMoney(ref.price) : '—'} readOnly />
+                  </label>
+                  <label className="field exel-ref-total">
+                    <span>Subtotal</span>
+                    <input value={ref ? formatMoney(lineTotal) : '—'} readOnly />
+                  </label>
+                  <button
+                    className="btn ghost exel-ref-remove"
+                    type="button"
+                    disabled={busy || form.refLines.length <= 1}
+                    onClick={() => removeRefLine(line.key)}
+                    title="Quitar referencia"
+                  >
+                    Quitar
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          <div className="exel-refs-sum">
+            <span>Fabricación total</span>
+            <strong>{formatMoney(fabricationTotal)}</strong>
+          </div>
+        </div>
 
         <form className="exel-entry-grid" onSubmit={submit}>
           <label className="field">
@@ -522,6 +676,22 @@ export function Exel() {
           <label className="field">
             <span>Apellidos</span>
             <input value={form.lastName} onChange={(event) => setForm({ ...form, lastName: event.target.value })} required />
+          </label>
+          <CityPicker
+            city={form.city}
+            department={form.department}
+            cityCode={form.cityCode}
+            disabled={busy}
+            onPick={(next) => setForm((current) => ({
+              ...current,
+              city: next.city,
+              department: next.department,
+              cityCode: next.code,
+            }))}
+          />
+          <label className="field">
+            <span>Departamento</span>
+            <input value={form.department} readOnly placeholder="Se completa al elegir ciudad" />
           </label>
           <label className="field">
             <span>Transportadora</span>
@@ -550,7 +720,14 @@ export function Exel() {
           </label>
           <label className="field">
             <span>Precio fabricación</span>
-            <input inputMode="numeric" value={form.costPrice} onChange={(event) => setForm({ ...form, costPrice: event.target.value.replace(/\D/g, '') })} placeholder="0" />
+            <input
+              inputMode="numeric"
+              value={form.refLines.some((line) => line.referenceId) ? String(fabricationTotal || '') : form.costPrice}
+              onChange={(event) => setForm({ ...form, costPrice: event.target.value.replace(/\D/g, '') })}
+              placeholder="0"
+              readOnly={form.refLines.some((line) => line.referenceId)}
+              title={form.refLines.some((line) => line.referenceId) ? 'Se calcula con las referencias y pares' : undefined}
+            />
           </label>
           <label className="field">
             <span>Precio venta</span>
@@ -696,6 +873,8 @@ export function Exel() {
                 <th>Número de guía</th>
                 <th>Nombres</th>
                 <th>Apellidos</th>
+                <th>Ciudad</th>
+                <th>Departamento</th>
                 <th>Transportadora</th>
                 <th>Asesora</th>
                 <th>Estado de envío</th>
@@ -710,7 +889,7 @@ export function Exel() {
             <tbody>
               {!filteredOrders.length && (
                 <tr>
-                  <td colSpan={13}>No hay filas con estos filtros en {sheet}.</td>
+                  <td colSpan={15}>No hay filas con estos filtros en {sheet}.</td>
                 </tr>
               )}
               {filteredOrders.map((order, index) => (
@@ -725,6 +904,8 @@ export function Exel() {
                   <td>{order.guideNumber || '—'}</td>
                   <td>{order.firstName}</td>
                   <td>{order.lastName}</td>
+                  <td>{order.city || '—'}</td>
+                  <td>{order.department || '—'}</td>
                   <td>{order.transport || '—'}</td>
                   <td className="exel-col-advisor">{formatPersonName(order.advisor)}</td>
                   <td>
@@ -757,7 +938,7 @@ export function Exel() {
             {!!filteredOrders.length && (
               <tfoot>
                 <tr>
-                  <td colSpan={11}>Total de ganancias (filtro actual)</td>
+                  <td colSpan={13}>Total de ganancias (filtro actual)</td>
                   <td className={`money ${filteredProfit < 0 ? 'exel-loss' : ''}`}>
                     <strong>{formatMoney(filteredProfit)}</strong>
                   </td>

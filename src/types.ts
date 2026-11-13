@@ -197,6 +197,16 @@ export interface ExcelPerson {
   updatedAt: string;
 }
 
+export interface ExcelRefLine {
+  referenceId: string;
+  code: string;
+  name: string;
+  color: string;
+  price: number;
+  pairs: number;
+  lineTotal: number;
+}
+
 export interface ExcelOrder {
   id: string;
   sheet: ExcelSheet;
@@ -211,6 +221,9 @@ export interface ExcelOrder {
   shippingPrice: number;
   profit: number;
   orderDate: string;
+  city: string;
+  department: string;
+  refs: ExcelRefLine[];
   pairId: string | null;
   personId: string | null;
   qrCode: string | null;
@@ -237,6 +250,7 @@ export interface ExcelModuleData {
     orders: ExcelOrder[];
   };
   people: ExcelPerson[];
+  references: Reference[];
 }
 
 export interface ExcelScanResult {
@@ -273,6 +287,9 @@ export interface ExcelOrderInput {
   salePrice: number;
   shippingPrice: number;
   orderDate: string;
+  city?: string;
+  department?: string;
+  refs?: Array<{ referenceId: string; pairs: number }>;
   pairId?: string | null;
   code?: string;
   phone?: string;

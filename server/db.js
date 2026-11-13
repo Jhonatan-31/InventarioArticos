@@ -139,6 +139,9 @@ function migrateExcelSheetsLuciBot() {
       sale_price INTEGER NOT NULL DEFAULT 0,
       shipping_price INTEGER NOT NULL DEFAULT 0,
       order_date TEXT NOT NULL,
+      city TEXT NOT NULL DEFAULT '',
+      department TEXT NOT NULL DEFAULT '',
+      refs_json TEXT NOT NULL DEFAULT '[]',
       pair_id TEXT REFERENCES pairs(id),
       person_id TEXT REFERENCES excel_people(id),
       created_at TEXT NOT NULL,
@@ -146,11 +149,14 @@ function migrateExcelSheetsLuciBot() {
     );
     INSERT INTO excel_orders_mig (
       id, sheet, guide_number, first_name, last_name, transport, advisor, ship_status,
-      cost_price, sale_price, shipping_price, order_date, pair_id, person_id, created_at, updated_at
+      cost_price, sale_price, shipping_price, order_date, city, department, refs_json,
+      pair_id, person_id, created_at, updated_at
     )
     SELECT
       id, sheet, guide_number, first_name, last_name, transport, advisor, ship_status,
-      cost_price, sale_price, shipping_price, order_date, pair_id, person_id, created_at, updated_at
+      cost_price, sale_price, shipping_price, order_date,
+      '', '', '[]',
+      pair_id, person_id, created_at, updated_at
     FROM excel_orders;
     DROP TABLE excel_orders;
     ALTER TABLE excel_orders_mig RENAME TO excel_orders;
@@ -292,6 +298,9 @@ export function getDb() {
       sale_price INTEGER NOT NULL DEFAULT 0,
       shipping_price INTEGER NOT NULL DEFAULT 0,
       order_date TEXT NOT NULL,
+      city TEXT NOT NULL DEFAULT '',
+      department TEXT NOT NULL DEFAULT '',
+      refs_json TEXT NOT NULL DEFAULT '[]',
       pair_id TEXT REFERENCES pairs(id),
       person_id TEXT REFERENCES excel_people(id),
       created_at TEXT NOT NULL,
@@ -302,6 +311,9 @@ export function getDb() {
     CREATE INDEX IF NOT EXISTS idx_excel_people_name ON excel_people(last_name, first_name);
   `);
   migrateExcelSheetsLuciBot();
+  addColumn('excel_orders', 'city', `TEXT NOT NULL DEFAULT ''`);
+  addColumn('excel_orders', 'department', `TEXT NOT NULL DEFAULT ''`);
+  addColumn('excel_orders', 'refs_json', `TEXT NOT NULL DEFAULT '[]'`);
   database.exec(`
     UPDATE pairs
     SET size = (

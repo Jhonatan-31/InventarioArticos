@@ -499,11 +499,53 @@ function mapExcelPerson(row) {
   };
 }
 
+function parseExcelRefs(raw) {
+  if (Array.isArray(raw)) return raw;
+  try {
+    const parsed = JSON.parse(String(raw || '[]'));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function cleanExcelRefs(input) {
+  const list = Array.isArray(input) ? input : parseExcelRefs(input);
+  const cleaned = [];
+  for (const item of list) {
+    const referenceId = String(item?.referenceId || item?.id || '').trim();
+    if (!referenceId) continue;
+    const ref = db.prepare(`SELECT id, code, name, color, price FROM shoe_refs WHERE id = ?`).get(referenceId);
+    if (!ref) fail(400, 'Una de las referencias del pedido ya no existe.');
+    const pairs = Math.max(1, Math.min(999, Number(item?.pairs || item?.quantity || 1) || 1));
+    if (!Number.isInteger(pairs)) fail(400, 'La cantidad de pares debe ser un entero.');
+    cleaned.push({
+      referenceId: ref.id,
+      code: ref.code,
+      name: ref.name,
+      color: ref.color || '',
+      price: Number(ref.price || 0),
+      pairs,
+      lineTotal: Number(ref.price || 0) * pairs,
+    });
+  }
+  return cleaned;
+}
+
 function mapExcelOrder(row) {
   const cost = Number(row.cost_price || 0);
   const sale = Number(row.sale_price || 0);
   const shipping = Number(row.shipping_price || 0);
   const shipStatus = row.ship_status;
+  const refs = parseExcelRefs(row.refs_json).map((item) => ({
+    referenceId: String(item.referenceId || item.id || ''),
+    code: String(item.code || ''),
+    name: String(item.name || ''),
+    color: String(item.color || ''),
+    price: Number(item.price || 0),
+    pairs: Number(item.pairs || item.quantity || 0) || 0,
+    lineTotal: Number(item.lineTotal != null ? item.lineTotal : (Number(item.price || 0) * Number(item.pairs || item.quantity || 0))) || 0,
+  })).filter((item) => item.referenceId);
   return {
     id: row.id,
     sheet: row.sheet,
@@ -518,6 +560,9 @@ function mapExcelOrder(row) {
     shippingPrice: shipping,
     profit: profitOf(cost, sale, shipping, shipStatus),
     orderDate: row.order_date,
+    city: row.city || '',
+    department: row.department || '',
+    refs,
     pairId: row.pair_id || null,
     personId: row.person_id || null,
     qrCode: row.qr_code || null,
@@ -603,6 +648,7 @@ function excelModuleData(sheet = 'Dropi') {
       ORDER BY updated_at DESC, last_name ASC, first_name ASC
       LIMIT 200
     `).all().map(mapExcelPerson),
+    references: listRefs(),
   };
 }
 
@@ -1145,7 +1191,11 @@ export const api = {
       fail(400, 'La transportadora debe ser Interrapidisimo, Coordinadora, Envia o TCC.');
     }
     const advisor = cleanOptional(input.advisor, 60);
-    const costPrice = cleanMoney(input.costPrice ?? 0, 'El precio de fabricación');
+    const city = cleanOptional(input.city, 80);
+    const department = cleanOptional(input.department, 80);
+    const refs = cleanExcelRefs(input.refs);
+    const refsCost = refs.reduce((sum, item) => sum + item.lineTotal, 0);
+    const costPrice = cleanMoney(refs.length ? refsCost : (input.costPrice ?? 0), 'El precio de fabricación');
     const salePrice = cleanMoney(input.salePrice ?? 0, 'El precio de venta');
     const shippingPrice = cleanMoney(input.shippingPrice ?? 0, 'El precio de envío');
     const orderDate = cleanOrderDate(input.orderDate);
@@ -1166,11 +1216,13 @@ export const api = {
       db.prepare(`
         INSERT INTO excel_orders (
           id, sheet, guide_number, first_name, last_name, transport, advisor, ship_status,
-          cost_price, sale_price, shipping_price, order_date, pair_id, person_id, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          cost_price, sale_price, shipping_price, order_date, city, department, refs_json,
+          pair_id, person_id, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         id, input.sheet, guideNumber, firstName, lastName, transport, advisor, input.shipStatus,
-        costPrice, salePrice, shippingPrice, orderDate, pairId, personId, now, now,
+        costPrice, salePrice, shippingPrice, orderDate, city, department, JSON.stringify(refs),
+        pairId, personId, now, now,
       );
       return excelModuleData(input.sheet);
     });
@@ -1193,7 +1245,14 @@ export const api = {
       fail(400, 'La transportadora debe ser Interrapidisimo, Coordinadora, Envia o TCC.');
     }
     const advisor = cleanOptional(input.advisor ?? current.advisor, 60);
-    const costPrice = cleanMoney(input.costPrice ?? current.cost_price, 'El precio de fabricación');
+    const city = cleanOptional(input.city ?? current.city, 80);
+    const department = cleanOptional(input.department ?? current.department, 80);
+    const refs = input.refs != null ? cleanExcelRefs(input.refs) : cleanExcelRefs(current.refs_json);
+    const refsCost = refs.reduce((sum, item) => sum + item.lineTotal, 0);
+    const costPrice = cleanMoney(
+      refs.length ? refsCost : (input.costPrice ?? current.cost_price),
+      'El precio de fabricación',
+    );
     const salePrice = cleanMoney(input.salePrice ?? current.sale_price, 'El precio de venta');
     const shippingPrice = cleanMoney(input.shippingPrice ?? current.shipping_price, 'El precio de envío');
     const orderDate = cleanOrderDate(input.orderDate ?? current.order_date);
@@ -1204,12 +1263,12 @@ export const api = {
         UPDATE excel_orders
         SET sheet = ?, guide_number = ?, first_name = ?, last_name = ?, transport = ?, advisor = ?,
             ship_status = ?, cost_price = ?, sale_price = ?, shipping_price = ?, order_date = ?,
-            person_id = ?, updated_at = ?
+            city = ?, department = ?, refs_json = ?, person_id = ?, updated_at = ?
         WHERE id = ?
       `).run(
         sheet, guideNumber, firstName, lastName, transport, advisor,
         shipStatus, costPrice, salePrice, shippingPrice, orderDate,
-        personId, now, current.id,
+        city, department, JSON.stringify(refs), personId, now, current.id,
       );
       return excelModuleData(sheet);
     });

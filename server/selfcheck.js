@@ -157,6 +157,8 @@ try {
     transport: 'Interrapidisimo',
     advisor: 'Laura',
     shipStatus: 'Enviado',
+    city: 'Medellín',
+    department: 'Antioquia',
     costPrice: 20000,
     salePrice: 80000,
     shippingPrice: 10000,
@@ -164,6 +166,27 @@ try {
     pairId: scanned.pair.id,
   });
   assert(excel.summary.count === 1 && excel.summary.totalProfit === 50000, 'Exel calcula ganancia como venta - fabricación - envío');
+  assert(excel.summary.orders[0].city === 'Medellín' && excel.summary.orders[0].department === 'Antioquia', 'Exel guarda ciudad y departamento');
+  const withRefs = api.createExcelOrder({
+    sheet: 'Articos',
+    guideNumber: 'G-REF',
+    firstName: 'Luis',
+    lastName: 'Pérez',
+    transport: 'TCC',
+    advisor: 'Laura',
+    shipStatus: 'Enviado',
+    city: 'Bogotá, D.C.',
+    department: 'Bogotá, D.C.',
+    salePrice: 200000,
+    shippingPrice: 10000,
+    orderDate: '2026-11-13',
+    refs: [{ referenceId: oxford.id, pairs: 2 }],
+  });
+  assert(
+    withRefs.summary.orders[0].costPrice === 160000 && withRefs.summary.orders[0].refs.length === 1,
+    'Exel suma fabricación con referencias y pares',
+  );
+  api.deleteExcelOrder(withRefs.summary.orders[0].id);
   const again = api.excelScan('00002', 'Dropi');
   assert(again.person?.firstName === 'Ana' && again.suggested.lastName === 'Rojas', 'el segundo escaneo trae los datos de la persona');
   excel = api.updateExcelOrder(excel.summary.orders[0].id, { shipStatus: 'Entregado' });
