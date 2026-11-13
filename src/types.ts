@@ -205,6 +205,8 @@ export interface ExcelRefLine {
   size: string;
   price: number;
   pairs: number;
+  pairCodes: string[];
+  pairIds: string[];
   lineTotal: number;
 }
 
@@ -290,7 +292,9 @@ export interface ExcelOrderInput {
   orderDate: string;
   city?: string;
   department?: string;
-  refs?: Array<{ referenceId: string; pairs: number; size?: string }>;
+  refs?: Array<{ referenceId: string; pairs: number; size?: string; pairCodes?: string[] }>;
+  excludeOrderId?: string | null;
+}
   pairId?: string | null;
   code?: string;
   phone?: string;

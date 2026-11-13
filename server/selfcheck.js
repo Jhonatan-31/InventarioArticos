@@ -185,8 +185,9 @@ try {
   assert(
     withRefs.summary.orders[0].costPrice === 160000
       && withRefs.summary.orders[0].refs.length === 1
-      && withRefs.summary.orders[0].refs[0].size === '40',
-    'Exel suma fabricación con referencias, pares y talla',
+      && withRefs.summary.orders[0].refs[0].size === '40'
+      && withRefs.summary.orders[0].refs[0].pairCodes.length === 2,
+    'Exel suma fabricación y anexa códigos de bodega a la persona',
   );
   api.deleteExcelOrder(withRefs.summary.orders[0].id);
   const again = api.excelScan('00002', 'Dropi');

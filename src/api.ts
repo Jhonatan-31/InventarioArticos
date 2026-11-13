@@ -4,6 +4,7 @@ import type {
   DashboardData,
   ExcelModuleData,
   ExcelOrderInput,
+  ExcelRefLine,
   ExcelScanResult,
   ExcelSheet,
   Incident,
@@ -129,6 +130,16 @@ export function excelScan(code: string, sheet: ExcelSheet) {
   return request<ExcelScanResult>('/api/excel/scan', {
     method: 'POST',
     body: JSON.stringify({ code, sheet }),
+  });
+}
+
+export function allocateExcelRefs(body: {
+  refs: Array<{ referenceId: string; pairs: number; size?: string; pairCodes?: string[] }>;
+  excludeOrderId?: string | null;
+}) {
+  return request<{ refs: ExcelRefLine[] }>('/api/excel/allocate', {
+    method: 'POST',
+    body: JSON.stringify(body),
   });
 }
 

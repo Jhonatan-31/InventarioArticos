@@ -129,6 +129,10 @@ app.post('/api/excel/scan', (req, res) => {
   res.json(api.excelScan(body.code, body.sheet || 'Dropi'));
 });
 
+app.post('/api/excel/allocate', (req, res) => {
+  res.json(api.allocateExcelRefs(req.body || {}));
+});
+
 app.post('/api/excel/orders', (req, res) => {
   res.status(201).json(api.createExcelOrder(req.body || {}));
 });

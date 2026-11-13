@@ -516,17 +516,68 @@ a { color: var(--cognac-deep); }
   display: grid;
   gap: 10px;
 }
-.exel-ref-row {
+.exel-ref-card {
   display: grid;
-  grid-template-columns: minmax(200px, 2fr) 84px 96px 110px 110px auto;
-  gap: 10px;
-  align-items: end;
+  gap: 8px;
   padding: 10px;
   border: 1px solid #eadfce;
   border-radius: 12px;
   background: #fff;
 }
+.exel-ref-row {
+  display: grid;
+  grid-template-columns: minmax(200px, 2fr) 84px 96px 110px 110px auto;
+  gap: 10px;
+  align-items: end;
+}
 .exel-ref-remove { height: 42px; }
+.exel-ref-codes {
+  display: grid;
+  gap: 6px;
+  padding-top: 2px;
+  border-top: 1px dashed #eadfce;
+}
+.exel-ref-codes-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.exel-ref-code-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.exel-ref-code-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #6e3220;
+  color: #fff8f3;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.03em;
+}
+.exel-ref-codes-note {
+  color: #5c3222;
+  font-size: 12px;
+}
+.exel-ref-codes-warn {
+  color: #b91c1c;
+  font-size: 12px;
+}
+.exel-ref-chip-qr {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid #d9c7b6;
+  color: #6e3220;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
 .exel-refs-sum {
   display: flex;
   justify-content: flex-end;

@@ -509,9 +509,71 @@ function parseExcelRefs(raw) {
   }
 }
 
-function cleanExcelRefs(input) {
+function collectAnnexedCodes(excludeOrderId = null) {
+  const rows = db.prepare(`SELECT id, refs_json FROM excel_orders`).all();
+  const taken = new Set();
+  for (const row of rows) {
+    if (excludeOrderId && row.id === excludeOrderId) continue;
+    for (const item of parseExcelRefs(row.refs_json)) {
+      const codes = Array.isArray(item?.pairCodes) ? item.pairCodes : [];
+      codes.forEach((code) => {
+        const token = String(code || '').trim();
+        if (token) taken.add(token);
+      });
+    }
+  }
+  return taken;
+}
+
+/** Anexa códigos de bodega (o conserva los ya ligados a esta persona) a cada línea. */
+function allocateWarehouseCodes(referenceId, size, qty, keepCodes = [], excludeOrderId = null, reserved = null) {
+  const taken = reserved || collectAnnexedCodes(excludeOrderId);
+  const kept = [];
+  const seen = new Set();
+  for (const raw of keepCodes) {
+    const code = String(raw || '').trim();
+    if (!code || seen.has(code)) continue;
+    const pair = db.prepare(`
+      SELECT id, qr_code, reference_id, size, status
+      FROM pairs WHERE qr_code = ? OR payload = ?
+    `).get(code, code);
+    if (!pair) continue;
+    if (pair.reference_id !== referenceId || String(pair.size || '') !== size) continue;
+    kept.push({ pairId: pair.id, qrCode: pair.qr_code });
+    seen.add(pair.qr_code);
+    taken.delete(pair.qr_code);
+  }
+  const need = Math.max(0, qty - kept.length);
+  if (need > 0) {
+    const candidates = db.prepare(`
+      SELECT id, qr_code
+      FROM pairs
+      WHERE reference_id = ?
+        AND size = ?
+        AND status IN ('inventario', 'prioridad')
+      ORDER BY CASE status WHEN 'prioridad' THEN 0 ELSE 1 END, qr_number ASC
+    `).all(referenceId, size);
+    for (const pair of candidates) {
+      if (kept.length >= qty) break;
+      if (taken.has(pair.qr_code) || seen.has(pair.qr_code)) continue;
+      kept.push({ pairId: pair.id, qrCode: pair.qr_code });
+      seen.add(pair.qr_code);
+      taken.add(pair.qr_code);
+    }
+  }
+  if (kept.length < qty) {
+    fail(
+      400,
+      `No hay suficientes pares en bodega para esa referencia en talla ${size}. Pediste ${qty} y solo se pudieron anexar ${kept.length}.`,
+    );
+  }
+  return kept.slice(0, qty);
+}
+
+function cleanExcelRefs(input, excludeOrderId = null) {
   const list = Array.isArray(input) ? input : parseExcelRefs(input);
   const cleaned = [];
+  const reserved = collectAnnexedCodes(excludeOrderId);
   for (const item of list) {
     const referenceId = String(item?.referenceId || item?.id || '').trim();
     if (!referenceId) continue;
@@ -522,6 +584,9 @@ function cleanExcelRefs(input) {
     const size = String(item?.size || '').trim();
     if (!size) fail(400, 'Elige la talla de cada referencia del pedido.');
     if (!SHOE_SIZES.includes(size)) fail(400, `La talla ${size} no está en la curva del 34 al 45.`);
+    const keepCodes = Array.isArray(item?.pairCodes) ? item.pairCodes : [];
+    const allocated = allocateWarehouseCodes(referenceId, size, pairs, keepCodes, excludeOrderId, reserved);
+    allocated.forEach((entry) => reserved.add(entry.qrCode));
     cleaned.push({
       referenceId: ref.id,
       code: ref.code,
@@ -530,6 +595,8 @@ function cleanExcelRefs(input) {
       size,
       price: Number(ref.price || 0),
       pairs,
+      pairCodes: allocated.map((entry) => entry.qrCode),
+      pairIds: allocated.map((entry) => entry.pairId),
       lineTotal: Number(ref.price || 0) * pairs,
     });
   }
@@ -549,6 +616,8 @@ function mapExcelOrder(row) {
     size: String(item.size || ''),
     price: Number(item.price || 0),
     pairs: Number(item.pairs || item.quantity || 0) || 0,
+    pairCodes: Array.isArray(item.pairCodes) ? item.pairCodes.map((code) => String(code || '')).filter(Boolean) : [],
+    pairIds: Array.isArray(item.pairIds) ? item.pairIds.map((id) => String(id || '')).filter(Boolean) : [],
     lineTotal: Number(item.lineTotal != null ? item.lineTotal : (Number(item.price || 0) * Number(item.pairs || item.quantity || 0))) || 0,
   })).filter((item) => item.referenceId);
   return {
@@ -1198,7 +1267,7 @@ export const api = {
     const advisor = cleanOptional(input.advisor, 60);
     const city = cleanOptional(input.city, 80);
     const department = cleanOptional(input.department, 80);
-    const refs = cleanExcelRefs(input.refs);
+    const refs = cleanExcelRefs(input.refs, null);
     const refsCost = refs.reduce((sum, item) => sum + item.lineTotal, 0);
     const costPrice = cleanMoney(refs.length ? refsCost : (input.costPrice ?? 0), 'El precio de fabricación');
     const salePrice = cleanMoney(input.salePrice ?? 0, 'El precio de venta');
@@ -1213,6 +1282,8 @@ export const api = {
       const pair = findPairByScan(input.code);
       if (!pair) fail(404, 'No encontré un par con ese código de barras.');
       pairId = pair.id;
+    } else if (refs[0]?.pairIds?.[0]) {
+      pairId = refs[0].pairIds[0];
     }
     return transaction(() => {
       const personId = upsertExcelPerson(firstName, lastName, transport, advisor, input.phone || '');
@@ -1231,6 +1302,13 @@ export const api = {
       );
       return excelModuleData(input.sheet);
     });
+  },
+
+  /** Vista previa: anexa códigos de bodega a las referencias elegidas sin guardar el pedido. */
+  allocateExcelRefs(input = {}) {
+    const excludeOrderId = input.excludeOrderId ? String(input.excludeOrderId) : null;
+    const refs = cleanExcelRefs(input.refs || [], excludeOrderId);
+    return { refs };
   },
 
   updateExcelOrder(id, input = {}) {
@@ -1252,10 +1330,16 @@ export const api = {
     const advisor = cleanOptional(input.advisor ?? current.advisor, 60);
     const city = cleanOptional(input.city ?? current.city, 80);
     const department = cleanOptional(input.department ?? current.department, 80);
-    const refs = input.refs != null ? cleanExcelRefs(input.refs) : cleanExcelRefs(current.refs_json);
-    const refsCost = refs.reduce((sum, item) => sum + item.lineTotal, 0);
+    // Solo reasigna códigos de bodega cuando el cliente envía referencias.
+    // En cambios de estado se conservan los códigos ya anexados a la persona.
+    const refs = input.refs != null
+      ? cleanExcelRefs(input.refs, current.id)
+      : parseExcelRefs(current.refs_json);
+    const refsCost = Array.isArray(refs)
+      ? refs.reduce((sum, item) => sum + Number(item.lineTotal || (Number(item.price || 0) * Number(item.pairs || 0)) || 0), 0)
+      : 0;
     const costPrice = cleanMoney(
-      refs.length ? refsCost : (input.costPrice ?? current.cost_price),
+      (input.refs != null && refs.length) ? refsCost : (input.costPrice ?? current.cost_price),
       'El precio de fabricación',
     );
     const salePrice = cleanMoney(input.salePrice ?? current.sale_price, 'El precio de venta');

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
+  allocateExcelRefs,
   createExcelOrder,
   deleteExcelOrder,
   excelScan,
@@ -50,6 +51,8 @@ type RefLineForm = {
   referenceId: string;
   pairs: string;
   size: string;
+  pairCodes: string[];
+  allocateNote: string;
 };
 
 type FormState = {
@@ -75,12 +78,14 @@ function todayBogota() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(new Date());
 }
 
-function newRefLine(referenceId = '', pairs = '1', size = ''): RefLineForm {
+function newRefLine(referenceId = '', pairs = '1', size = '', pairCodes: string[] = []): RefLineForm {
   return {
     key: crypto.randomUUID(),
     referenceId,
     pairs,
     size,
+    pairCodes,
+    allocateNote: '',
   };
 }
 
@@ -107,7 +112,12 @@ function emptyForm(): FormState {
 
 function refsToFormLines(refs: ExcelRefLine[] | undefined): RefLineForm[] {
   if (!refs?.length) return [newRefLine()];
-  return refs.map((item) => newRefLine(item.referenceId, String(item.pairs || 1), item.size || ''));
+  return refs.map((item) => newRefLine(
+    item.referenceId,
+    String(item.pairs || 1),
+    item.size || '',
+    item.pairCodes || [],
+  ));
 }
 
 function fabricationFromLines(lines: RefLineForm[], references: Reference[]) {
@@ -146,11 +156,12 @@ function shipStatusClass(status: ExcelShipStatus) {
 function orderRefLines(order: ExcelOrder) {
   if (order.refs?.length) {
     return order.refs.map((item) => ({
-      key: `${item.referenceId}-${item.code}-${item.color}-${item.size}`,
+      key: `${item.referenceId}-${item.code}-${item.color}-${item.size}-${(item.pairCodes || []).join('-')}`,
       code: item.code,
       color: item.color,
       size: item.size || '',
       pairs: item.pairs,
+      pairCodes: item.pairCodes || [],
     }));
   }
   if (order.referenceCode) {
@@ -160,6 +171,7 @@ function orderRefLines(order: ExcelOrder) {
       color: order.pairColor || '',
       size: order.pairSize || '',
       pairs: 1,
+      pairCodes: order.qrCode ? [order.qrCode] : [],
     }];
   }
   return [];
@@ -264,6 +276,71 @@ export function Exel() {
     });
   }, [form.refLines, references]);
 
+  useEffect(() => {
+    const readyLines = form.refLines.filter((line) => line.referenceId && line.size && Number(line.pairs || 0) > 0);
+    if (!readyLines.length) return;
+    let cancel = false;
+    const timer = window.setTimeout(() => {
+      void allocateExcelRefs({
+        excludeOrderId: editingId,
+        refs: readyLines.map((line) => ({
+          referenceId: line.referenceId,
+          size: line.size,
+          pairs: Math.max(1, Number(String(line.pairs || '').replace(/\D/g, '')) || 1),
+          pairCodes: line.pairCodes,
+        })),
+      }).then((result) => {
+        if (cancel) return;
+        setForm((current) => {
+          let changed = false;
+          const nextLines = current.refLines.map((line) => {
+            if (!line.referenceId || !line.size) {
+              if (!line.pairCodes.length && !line.allocateNote) return line;
+              changed = true;
+              return { ...line, pairCodes: [], allocateNote: '' };
+            }
+            const match = result.refs.find((item) => (
+              item.referenceId === line.referenceId
+              && item.size === line.size
+              && item.pairs === Math.max(1, Number(String(line.pairs || '').replace(/\D/g, '')) || 1)
+            ));
+            if (!match) return line;
+            const codes = match.pairCodes || [];
+            const same = codes.length === line.pairCodes.length && codes.every((code, index) => code === line.pairCodes[index]);
+            if (same && !line.allocateNote) return line;
+            changed = true;
+            return {
+              ...line,
+              pairCodes: codes,
+              allocateNote: codes.length
+                ? `Anexados a la persona: ${codes.join(', ')}`
+                : '',
+            };
+          });
+          return changed ? { ...current, refLines: nextLines } : current;
+        });
+      }).catch((caught: unknown) => {
+        if (cancel) return;
+        const message = caught instanceof Error ? caught.message : 'No se pudieron anexar códigos de bodega.';
+        setForm((current) => ({
+          ...current,
+          refLines: current.refLines.map((line) => (
+            line.referenceId && line.size
+              ? { ...line, allocateNote: message, pairCodes: line.pairCodes }
+              : line
+          )),
+        }));
+      });
+    }, 280);
+    return () => {
+      cancel = true;
+      window.clearTimeout(timer);
+    };
+  }, [
+    editingId,
+    form.refLines.map((line) => `${line.key}:${line.referenceId}:${line.size}:${line.pairs}`).join('|'),
+  ]);
+
   const filteredOrders = useMemo(() => {
     const rows = data?.summary.orders || [];
     const q = query.trim().toLowerCase();
@@ -337,7 +414,15 @@ export function Exel() {
   function updateRefLine(key: string, patch: Partial<RefLineForm>) {
     setForm((current) => ({
       ...current,
-      refLines: current.refLines.map((line) => (line.key === key ? { ...line, ...patch } : line)),
+      refLines: current.refLines.map((line) => {
+        if (line.key !== key) return line;
+        const next = { ...line, ...patch };
+        if (patch.referenceId != null || patch.size != null || patch.pairs != null) {
+          next.pairCodes = patch.referenceId != null || patch.size != null ? [] : line.pairCodes;
+          next.allocateNote = '';
+        }
+        return next;
+      }),
     }));
   }
 
@@ -416,13 +501,21 @@ export function Exel() {
           const existing = refLines.find((line) => line.referenceId === refId && line.size === size);
           if (existing) {
             const pairs = Math.max(1, (Number(existing.pairs) || 0) + 1);
+            const codes = existing.pairCodes.includes(result.pair.qrCode)
+              ? existing.pairCodes
+              : [...existing.pairCodes, result.pair.qrCode];
             refLines = refLines.map((line) => (
-              line.key === existing.key ? { ...line, pairs: String(pairs), size: size || line.size } : line
+              line.key === existing.key
+                ? { ...line, pairs: String(pairs), size: size || line.size, pairCodes: codes, allocateNote: '' }
+                : line
             ));
           } else if (!refLines[0]?.referenceId && refLines.length === 1) {
-            refLines = [newRefLine(refId, '1', size)];
+            refLines = [newRefLine(refId, '1', size, result.pair.qrCode ? [result.pair.qrCode] : [])];
           } else {
-            refLines = [...refLines.filter((line) => line.referenceId), newRefLine(refId, '1', size)];
+            refLines = [
+              ...refLines.filter((line) => line.referenceId),
+              newRefLine(refId, '1', size, result.pair.qrCode ? [result.pair.qrCode] : []),
+            ];
           }
         }
         return {
@@ -468,9 +561,14 @@ export function Exel() {
         referenceId: line.referenceId,
         pairs: Math.max(1, Number(String(line.pairs || '').replace(/\D/g, '')) || 1),
         size: line.size,
+        pairCodes: line.pairCodes,
       }));
     if (refsPayload.some((line) => !line.size)) {
       setError('Elige la talla de cada referencia.');
+      return;
+    }
+    if (refsPayload.some((line) => !line.pairCodes.length)) {
+      setError('Cada referencia debe tener códigos de bodega anexados a la persona.');
       return;
     }
     setBusy(true);
@@ -630,7 +728,10 @@ export function Exel() {
           <div className="exel-refs-head">
             <div>
               <h3>Referencias del pedido</h3>
-              <p>Elige referencias guardadas, la talla y la cantidad de pares. El precio de fabricación se suma solo.</p>
+              <p>
+                Elige referencia, talla y pares. El sistema anexa automáticamente los códigos de bodega
+                a esta persona y quedan ligados a ella.
+              </p>
             </div>
             <button className="btn ghost" type="button" onClick={addRefLine} disabled={busy || !references.length}>
               Agregar referencia
@@ -645,63 +746,87 @@ export function Exel() {
               const pairs = Math.max(0, Number(String(line.pairs || '').replace(/\D/g, '')) || 0);
               const lineTotal = ref ? ref.price * pairs : 0;
               return (
-                <div className="exel-ref-row" key={line.key}>
-                  <label className="field exel-ref-pick">
-                    <span>Referencia {index + 1}</span>
-                    <select
-                      value={line.referenceId}
-                      disabled={busy || !references.length}
-                      onChange={(event) => updateRefLine(line.key, { referenceId: event.target.value })}
+                <div className="exel-ref-card" key={line.key}>
+                  <div className="exel-ref-row">
+                    <label className="field exel-ref-pick">
+                      <span>Referencia {index + 1}</span>
+                      <select
+                        value={line.referenceId}
+                        disabled={busy || !references.length}
+                        onChange={(event) => updateRefLine(line.key, { referenceId: event.target.value })}
+                      >
+                        <option value="">Elegir referencia guardada…</option>
+                        {references.map((item) => (
+                          <option key={item.id} value={item.id}>
+                            {item.code} · {item.color} · {formatMoney(item.price)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="field exel-ref-pairs">
+                      <span>Pares</span>
+                      <input
+                        inputMode="numeric"
+                        value={line.pairs}
+                        disabled={busy}
+                        onChange={(event) => updateRefLine(line.key, { pairs: event.target.value.replace(/\D/g, '') })}
+                        placeholder="1"
+                      />
+                    </label>
+                    <label className="field exel-ref-size">
+                      <span>Talla</span>
+                      <select
+                        value={line.size}
+                        disabled={busy}
+                        onChange={(event) => updateRefLine(line.key, { size: event.target.value })}
+                        required={!!line.referenceId}
+                      >
+                        <option value="">Elegir…</option>
+                        {SHOE_SIZES.map((size) => (
+                          <option key={size} value={size}>{size}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="field exel-ref-unit">
+                      <span>Precio ref.</span>
+                      <input value={ref ? formatMoney(ref.price) : '—'} readOnly />
+                    </label>
+                    <label className="field exel-ref-total">
+                      <span>Subtotal</span>
+                      <input value={ref ? formatMoney(lineTotal) : '—'} readOnly />
+                    </label>
+                    <button
+                      className="btn ghost exel-ref-remove"
+                      type="button"
+                      disabled={busy || form.refLines.length <= 1}
+                      onClick={() => removeRefLine(line.key)}
+                      title="Quitar referencia"
                     >
-                      <option value="">Elegir referencia guardada…</option>
-                      {references.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.code} · {item.color} · {formatMoney(item.price)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="field exel-ref-pairs">
-                    <span>Pares</span>
-                    <input
-                      inputMode="numeric"
-                      value={line.pairs}
-                      disabled={busy}
-                      onChange={(event) => updateRefLine(line.key, { pairs: event.target.value.replace(/\D/g, '') })}
-                      placeholder="1"
-                    />
-                  </label>
-                  <label className="field exel-ref-size">
-                    <span>Talla</span>
-                    <select
-                      value={line.size}
-                      disabled={busy}
-                      onChange={(event) => updateRefLine(line.key, { size: event.target.value })}
-                      required={!!line.referenceId}
-                    >
-                      <option value="">Elegir…</option>
-                      {SHOE_SIZES.map((size) => (
-                        <option key={size} value={size}>{size}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="field exel-ref-unit">
-                    <span>Precio ref.</span>
-                    <input value={ref ? formatMoney(ref.price) : '—'} readOnly />
-                  </label>
-                  <label className="field exel-ref-total">
-                    <span>Subtotal</span>
-                    <input value={ref ? formatMoney(lineTotal) : '—'} readOnly />
-                  </label>
-                  <button
-                    className="btn ghost exel-ref-remove"
-                    type="button"
-                    disabled={busy || form.refLines.length <= 1}
-                    onClick={() => removeRefLine(line.key)}
-                    title="Quitar referencia"
-                  >
-                    Quitar
-                  </button>
+                      Quitar
+                    </button>
+                  </div>
+                  <div className="exel-ref-codes">
+                    <span className="exel-ref-codes-label">Códigos anexados</span>
+                    {line.pairCodes.length ? (
+                      <div className="exel-ref-code-list">
+                        {line.pairCodes.map((code) => (
+                          <span className="exel-ref-code-pill" key={code}>{code}</span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="muted">
+                        {line.referenceId && line.size
+                          ? (line.allocateNote || 'Buscando pares en bodega…')
+                          : 'Elige referencia y talla para anexar el código de bodega'}
+                      </span>
+                    )}
+                    {!!line.allocateNote && !!line.pairCodes.length && (
+                      <small className="exel-ref-codes-note">{line.allocateNote}</small>
+                    )}
+                    {!!line.allocateNote && !line.pairCodes.length && (
+                      <small className="exel-ref-codes-warn">{line.allocateNote}</small>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -962,11 +1087,14 @@ export function Exel() {
                     ) : (
                       <div className="exel-refs-cell">
                         {refs.map((item) => (
-                          <div className="exel-ref-chip" key={item.key} title={`${item.code}${item.color ? ` · ${item.color}` : ''}${item.size ? ` · talla ${item.size}` : ''} · ${item.pairs} par${item.pairs === 1 ? '' : 'es'}`}>
+                          <div className="exel-ref-chip" key={item.key} title={`${item.code}${item.color ? ` · ${item.color}` : ''}${item.size ? ` · talla ${item.size}` : ''} · ${item.pairs} par${item.pairs === 1 ? '' : 'es'}${(item.pairCodes || []).length ? ` · ${(item.pairCodes || []).join(', ')}` : ''}`}>
                             <span className="exel-ref-chip-code">{item.code}</span>
                             {!!item.color && <span className="exel-ref-chip-color">{item.color}</span>}
                             {!!item.size && <span className="exel-ref-chip-size">T{item.size}</span>}
                             <span className="exel-ref-chip-pairs">{item.pairs}p</span>
+                            {(item.pairCodes || []).map((code) => (
+                              <span className="exel-ref-chip-qr" key={code}>{code}</span>
+                            ))}
                           </div>
                         ))}
                         {totalPairs > 0 && (
