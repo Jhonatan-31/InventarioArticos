@@ -165,6 +165,24 @@ function migrateExcelSheetsLuciBot() {
   `);
 }
 
+/** Quita asesoras erróneas "lucid bot" / "luci bot" del Excel. */
+function cleanLuciBotAdvisors() {
+  const key = 'clean_luci_bot_advisors_20261113';
+  const done = database.prepare(`SELECT value FROM meta WHERE key = ?`).get(key);
+  if (done) return;
+  database.prepare(`
+    UPDATE excel_orders
+    SET advisor = ''
+    WHERE lower(trim(advisor)) IN ('lucid bot', 'luci bot')
+  `).run();
+  database.prepare(`
+    UPDATE excel_people
+    SET advisor = ''
+    WHERE lower(trim(advisor)) IN ('lucid bot', 'luci bot')
+  `).run();
+  database.prepare(`INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)`).run(key, new Date().toISOString());
+}
+
 /** Una sola vez: borra pares y movimientos, conserva referencias. */
 function wipeStockKeepRefsOnce() {
   const key = 'wipe_stock_keep_refs_20261107';
@@ -323,6 +341,7 @@ export function getDb() {
   `);
   database.prepare(`INSERT OR IGNORE INTO meta (key, value) VALUES ('next_qr', '1')`).run();
   wipeStockKeepRefsOnce();
+  cleanLuciBotAdvisors();
   return database;
 }
 

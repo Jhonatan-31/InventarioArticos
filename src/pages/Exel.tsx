@@ -242,14 +242,15 @@ export function Exel() {
   ), [form.salePrice, costForProfit, form.shippingPrice, form.shipStatus]);
 
   const advisorOptions = useMemo(() => {
+    const blocked = new Set(['lucid bot', 'luci bot']);
     const names = new Set<string>();
     (data?.summary.orders || []).forEach((row) => {
       const name = row.advisor.trim();
-      if (name) names.add(name);
+      if (name && !blocked.has(name.toLowerCase())) names.add(name);
     });
     (data?.people || []).forEach((person) => {
       const name = person.advisor.trim();
-      if (name) names.add(name);
+      if (name && !blocked.has(name.toLowerCase())) names.add(name);
     });
     return Array.from(names).sort((a, b) => a.localeCompare(b, 'es'));
   }, [data]);
