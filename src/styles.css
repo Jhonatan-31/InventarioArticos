@@ -998,31 +998,120 @@ table.bodega tfoot td { position: sticky; bottom: 0; background: #f6efe6; font-w
 .sheet-card strong { display: block; margin: 6px 0; font-size: 18px; overflow-wrap: anywhere; }
 .sheet-card p { color: var(--muted); font-size: 14px; line-height: 1.4; }
 
+.print-layout-switch {
+  display: inline-flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #f7f1ea;
+  width: fit-content;
+}
+.print-layout-switch button {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  padding: 8px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.print-layout-switch button.active {
+  background: #6e3220;
+  color: #fff8f3;
+}
+.print-layout-hint {
+  margin: 0;
+  font-size: 13px;
+  max-width: 62ch;
+}
 .print-root {
-  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;
-  margin-top: 12px; max-height: 46vh; overflow: auto; width: 100%;
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  max-height: 46vh;
+  overflow: auto;
+  width: 100%;
+  justify-content: start;
+  align-content: start;
+}
+.print-root.print-layout-sticker {
+  grid-template-columns: repeat(auto-fill, 50mm);
+}
+.print-root.print-layout-sheet {
+  grid-template-columns: repeat(auto-fill, 50mm);
 }
 .shoe-label {
-  display: flex; flex-direction: column; gap: 6px;
-  border: 1px solid #111; background: white; color: black; padding: 8px 10px; min-height: 148px;
+  box-sizing: border-box;
+  width: 50mm;
+  height: 30mm;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1.5px;
+  border: 1px solid #111;
+  background: white;
+  color: black;
+  padding: 1.6mm 2mm 1.4mm;
   min-width: 0;
+  overflow: hidden;
 }
-.shoe-label svg { width: 100%; height: 54px; }
+.shoe-label-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  flex: 0 0 auto;
+}
+.shoe-label svg {
+  width: 100%;
+  height: 7.5mm;
+  max-height: 8mm;
+}
 .shoe-label-brand {
-  display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap;
-  border-bottom: 1px solid #111; padding-bottom: 4px; font-size: 11px; letter-spacing: 0.08em;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 4px;
+  border-bottom: 0.4px solid #111;
+  padding-bottom: 0.6mm;
+  font-size: 6.5pt;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+.shoe-label-brand strong {
+  font-weight: 800;
+}
+.shoe-label-brand span {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 .shoe-label-number {
   font-family: var(--serif);
-  font-size: clamp(28px, 6vw, 36px);
+  font-size: 13pt;
   font-weight: 700;
   line-height: 1;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   text-align: center;
   overflow-wrap: anywhere;
 }
-.shoe-label-copy { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.shoe-label-copy span, .shoe-label-copy small { font-size: 13px; line-height: 1.3; overflow-wrap: anywhere; }
+.shoe-label-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+}
+.shoe-label-copy span,
+.shoe-label-copy small {
+  font-size: 6pt;
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 .gate {
   height: 100vh;
@@ -1118,7 +1207,9 @@ table.bodega tfoot td { position: sticky; bottom: 0; background: #f6efe6; font-w
   .filter-caption { display: none; }
   .page-actions { margin-top: 0; }
   .bodega-wrap { max-height: calc(100dvh - 220px); }
-  .print-root { grid-template-columns: 1fr; max-height: 55vh; }
+  .print-root { max-height: 55vh; }
+  .print-root.print-layout-sticker,
+  .print-root.print-layout-sheet { grid-template-columns: repeat(auto-fill, 50mm); }
   .mode-switch { grid-template-columns: 1fr; }
   .btn { white-space: normal; text-align: center; }
 }
@@ -1152,10 +1243,33 @@ table.bodega tfoot td { position: sticky; bottom: 0; background: #f6efe6; font-w
 }
 
 @media print {
-  @page { size: A4; margin: 8mm; }
   .shell, .toasts, .no-print { display: none !important; }
   .modal-backdrop { position: static; background: white; padding: 0; display: block; }
   .modal { max-height: none; overflow: visible; box-shadow: none; border: 0; width: auto; padding: 0; }
-  .print-root { max-height: none; overflow: visible; display: grid; margin: 0; }
-  .shoe-label { break-inside: avoid; page-break-inside: avoid; }
+  .print-root {
+    max-height: none;
+    overflow: visible;
+    display: grid;
+    margin: 0;
+    gap: 2mm;
+    justify-content: start;
+  }
+  .shoe-label {
+    width: 50mm !important;
+    height: 30mm !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  html[data-print-layout='sticker'] .print-root {
+    grid-template-columns: 50mm;
+    gap: 0;
+  }
+  html[data-print-layout='sticker'] .shoe-label + .shoe-label {
+    break-before: page;
+    page-break-before: always;
+  }
+  html[data-print-layout='sheet'] .print-root {
+    grid-template-columns: repeat(3, 50mm);
+    gap: 3mm 4mm;
+  }
 }

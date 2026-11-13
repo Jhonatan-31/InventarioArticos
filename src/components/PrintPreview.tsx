@@ -3,7 +3,9 @@ import { checkLabels, confirmLabels } from '../api';
 import type { Pair } from '../types';
 import { useUi } from '../ui';
 
-function Barcode({ value }: { value: string }) {
+type PrintLayout = 'sticker' | 'sheet';
+
+function Barcode({ value, compact }: { value: string; compact: boolean }) {
   const ref = useRef<SVGSVGElement>(null);
   useEffect(() => {
     let cancel = false;
@@ -16,12 +18,12 @@ function Barcode({ value }: { value: string }) {
         format: 'CODE128',
         displayValue: false,
         margin: 0,
-        height: 52,
-        width: 1.7,
+        height: compact ? 22 : 40,
+        width: compact ? 1.05 : 1.4,
       });
     }).catch(() => {});
     return () => { cancel = true; };
-  }, [value]);
+  }, [value, compact]);
   return <svg ref={ref} role="img" aria-label={`Código ${value}`} />;
 }
 
@@ -32,6 +34,7 @@ export function PrintPreview({ pairIds, onClose }: { pairIds: string[]; onClose:
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [ready, setReady] = useState(false);
+  const [layout, setLayout] = useState<PrintLayout>('sticker');
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -40,6 +43,13 @@ export function PrintPreview({ pairIds, onClose }: { pairIds: string[]; onClose:
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
+
+  useEffect(() => {
+    document.documentElement.dataset.printLayout = layout;
+    return () => {
+      delete document.documentElement.dataset.printLayout;
+    };
+  }, [layout]);
 
   useEffect(() => {
     let cancel = false;
@@ -71,13 +81,30 @@ export function PrintPreview({ pairIds, onClose }: { pairIds: string[]; onClose:
     }
   }
 
+  function handlePrint() {
+    document.documentElement.dataset.printLayout = layout;
+    let style = document.getElementById('evalook-print-page') as HTMLStyleElement | null;
+    if (!style) {
+      style = document.createElement('style');
+      style.id = 'evalook-print-page';
+      document.head.appendChild(style);
+    }
+    style.textContent = layout === 'sticker'
+      ? '@page { size: 50mm 30mm; margin: 0; }'
+      : '@page { size: A4; margin: 8mm; }';
+    window.print();
+  }
+
   return (
     <div className="modal-backdrop">
       <div className="modal wide" role="dialog" aria-modal="true" aria-label="Etiquetas de código de barras">
         <header className="modal-head no-print">
           <div>
-            <h2>Etiquetas para pegar</h2>
-            <p>Cada código conserva su número. Después de pegarlas, confirma la impresión. Si una se daña, registra la novedad y vuelve a salir el mismo código.</p>
+            <h2>Etiquetas sticker</h2>
+            <p>
+              Tamaño para pegar en la plantilla del zapato (50 × 30 mm). Elige sticker individual
+              o varios en una hoja A4.
+            </p>
           </div>
           <button type="button" className="icon-btn" onClick={onClose} aria-label="Cerrar">×</button>
         </header>
@@ -93,28 +120,52 @@ export function PrintPreview({ pairIds, onClose }: { pairIds: string[]; onClose:
             </div>
           )}
           {printable.length > 0 && (
-            <div className="form-actions">
-              <button type="button" className="btn ghost" onClick={onClose}>Cerrar</button>
-              <button type="button" className="btn" onClick={() => window.print()}>Imprimir</button>
-              <button type="button" className="btn primary" onClick={confirm} disabled={busy}>
-                {busy ? 'Confirmando…' : 'Confirmar etiquetas impresas'}
-              </button>
-            </div>
+            <>
+              <div className="print-layout-switch" role="tablist" aria-label="Modo de impresión">
+                <button
+                  type="button"
+                  className={layout === 'sticker' ? 'active' : ''}
+                  onClick={() => setLayout('sticker')}
+                >
+                  Sticker 50×30 mm
+                </button>
+                <button
+                  type="button"
+                  className={layout === 'sheet' ? 'active' : ''}
+                  onClick={() => setLayout('sheet')}
+                >
+                  Varios en hoja A4
+                </button>
+              </div>
+              <p className="muted print-layout-hint">
+                {layout === 'sticker'
+                  ? 'En el diálogo de impresión elige papel o etiqueta de 50 × 30 mm (o el más cercano) y márgenes en 0.'
+                  : 'Imprime en A4. Cada sticker mide 50 × 30 mm para recortar o usar hoja adhesiva.'}
+              </p>
+              <div className="form-actions">
+                <button type="button" className="btn ghost" onClick={onClose}>Cerrar</button>
+                <button type="button" className="btn" onClick={handlePrint}>Imprimir sticker</button>
+                <button type="button" className="btn primary" onClick={confirm} disabled={busy}>
+                  {busy ? 'Confirmando…' : 'Confirmar etiquetas impresas'}
+                </button>
+              </div>
+            </>
           )}
         </div>
-        <div className="print-root">
+        <div className={`print-root print-layout-${layout}`}>
           {printable.map((pair) => (
             <article className="shoe-label" key={pair.id}>
               <div className="shoe-label-brand">
-                <strong>CALZADO EVALOOK</strong>
-                <span>Par de inventario</span>
+                <strong>EVALOOK</strong>
+                <span>T{pair.size}</span>
               </div>
               <div className="shoe-label-number">{pair.qrCode}</div>
-              <Barcode value={pair.qrCode} />
+              <div className="shoe-label-bar">
+                <Barcode value={pair.qrCode} compact />
+              </div>
               <div className="shoe-label-copy">
-                <span>{pair.referenceCode} · Talla {pair.size}</span>
+                <span>{pair.referenceCode} · {pair.color}</span>
                 <span>{pair.name}</span>
-                <span>{pair.color} · {pair.line}</span>
               </div>
             </article>
           ))}

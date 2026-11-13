@@ -36,7 +36,7 @@ export function Labels() {
       <PageHeader
         eyebrow="Impresión"
         title="Etiquetas"
-        text="La primera impresión queda libre. Si el código ya se confirmó y se daña, primero se registra la novedad y después se imprime el mismo número."
+        text="Las etiquetas salen en sticker 50×30 mm para pegar en la plantilla del zapato. Si el código ya se confirmó y se daña, registra la novedad y vuelve a imprimir el mismo número."
         actions={
           <>
             <button type="button" className="btn" disabled={selected.length === 0} onClick={() => openPrint(selected)}>Imprimir selección</button>
