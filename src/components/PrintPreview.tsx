@@ -5,6 +5,16 @@ import { useUi } from '../ui';
 
 type PrintLayout = 'sticker' | 'sheet';
 
+const SHEET_PER_PAGE = 12;
+
+function chunkPairs(items: Pair[], size: number) {
+  const pages: Pair[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    pages.push(items.slice(i, i + size));
+  }
+  return pages.length ? pages : [[]];
+}
+
 function Barcode({ value, compact }: { value: string; compact: boolean }) {
   const ref = useRef<SVGSVGElement>(null);
   useEffect(() => {
@@ -134,13 +144,13 @@ export function PrintPreview({ pairIds, onClose }: { pairIds: string[]; onClose:
                   className={layout === 'sheet' ? 'active' : ''}
                   onClick={() => setLayout('sheet')}
                 >
-                  Varios en hoja A4
+                  A4 · 12 por hoja
                 </button>
               </div>
               <p className="muted print-layout-hint">
                 {layout === 'sticker'
                   ? 'En el diálogo de impresión elige papel o etiqueta de 50 × 30 mm (o el más cercano) y márgenes en 0.'
-                  : 'Imprime en A4. Cada sticker mide 50 × 30 mm para recortar o usar hoja adhesiva.'}
+                  : 'Imprime en A4 con 12 stickers por hoja (3 × 4). Al llenar la hoja pasa a la siguiente.'}
               </p>
               <div className="form-actions">
                 <button type="button" className="btn ghost" onClick={onClose}>Cerrar</button>
@@ -153,22 +163,45 @@ export function PrintPreview({ pairIds, onClose }: { pairIds: string[]; onClose:
           )}
         </div>
         <div className={`print-root print-layout-${layout}`}>
-          {printable.map((pair) => (
-            <article className="shoe-label" key={pair.id}>
-              <div className="shoe-label-brand">
-                <strong>EVALOOK</strong>
-                <span>T{pair.size}</span>
-              </div>
-              <div className="shoe-label-number">{pair.qrCode}</div>
-              <div className="shoe-label-bar">
-                <Barcode value={pair.qrCode} compact />
-              </div>
-              <div className="shoe-label-copy">
-                <span>{pair.referenceCode} · {pair.color}</span>
-                <span>{pair.name}</span>
-              </div>
-            </article>
-          ))}
+          {layout === 'sheet' ? (
+            chunkPairs(printable, SHEET_PER_PAGE).map((page, pageIndex) => (
+              <section className="print-sheet-page" key={`sheet-${pageIndex}`}>
+                {page.map((pair) => (
+                  <article className="shoe-label" key={pair.id}>
+                    <div className="shoe-label-brand">
+                      <strong>EVALOOK</strong>
+                      <span>T{pair.size}</span>
+                    </div>
+                    <div className="shoe-label-number">{pair.qrCode}</div>
+                    <div className="shoe-label-bar">
+                      <Barcode value={pair.qrCode} compact />
+                    </div>
+                    <div className="shoe-label-copy">
+                      <span>{pair.referenceCode} · {pair.color}</span>
+                      <span>{pair.name}</span>
+                    </div>
+                  </article>
+                ))}
+              </section>
+            ))
+          ) : (
+            printable.map((pair) => (
+              <article className="shoe-label" key={pair.id}>
+                <div className="shoe-label-brand">
+                  <strong>EVALOOK</strong>
+                  <span>T{pair.size}</span>
+                </div>
+                <div className="shoe-label-number">{pair.qrCode}</div>
+                <div className="shoe-label-bar">
+                  <Barcode value={pair.qrCode} compact />
+                </div>
+                <div className="shoe-label-copy">
+                  <span>{pair.referenceCode} · {pair.color}</span>
+                  <span>{pair.name}</span>
+                </div>
+              </article>
+            ))
+          )}
         </div>
       </div>
     </div>

@@ -1093,7 +1093,19 @@ table.bodega tfoot td { position: sticky; bottom: 0; background: #f6efe6; font-w
   grid-template-columns: repeat(auto-fill, 50mm);
 }
 .print-root.print-layout-sheet {
-  grid-template-columns: repeat(auto-fill, 50mm);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: flex-start;
+}
+.print-sheet-page {
+  display: grid;
+  grid-template-columns: repeat(3, 50mm);
+  grid-template-rows: repeat(4, 30mm);
+  gap: 3mm 4mm;
+  width: fit-content;
+  justify-content: start;
+  align-content: start;
 }
 .shoe-label {
   box-sizing: border-box;
@@ -1259,8 +1271,8 @@ table.bodega tfoot td { position: sticky; bottom: 0; background: #f6efe6; font-w
   .page-actions { margin-top: 0; }
   .bodega-wrap { max-height: calc(100dvh - 220px); }
   .print-root { max-height: 55vh; }
-  .print-root.print-layout-sticker,
-  .print-root.print-layout-sheet { grid-template-columns: repeat(auto-fill, 50mm); }
+  .print-root.print-layout-sticker { grid-template-columns: repeat(auto-fill, 50mm); }
+  .print-sheet-page { grid-template-columns: repeat(3, 50mm); }
   .mode-switch { grid-template-columns: 1fr; }
   .btn { white-space: normal; text-align: center; }
 }
@@ -1320,7 +1332,22 @@ table.bodega tfoot td { position: sticky; bottom: 0; background: #f6efe6; font-w
     page-break-before: always;
   }
   html[data-print-layout='sheet'] .print-root {
+    display: block;
+    gap: 0;
+  }
+  html[data-print-layout='sheet'] .print-sheet-page {
+    display: grid;
     grid-template-columns: repeat(3, 50mm);
-    gap: 3mm 4mm;
+    grid-template-rows: repeat(4, 30mm);
+    gap: 2.5mm 3.5mm;
+    width: 100%;
+    justify-content: center;
+    align-content: start;
+    break-after: page;
+    page-break-after: always;
+  }
+  html[data-print-layout='sheet'] .print-sheet-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
   }
 }
