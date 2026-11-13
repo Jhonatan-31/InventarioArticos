@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   createExcelOrder,
   deleteExcelOrder,
@@ -104,9 +105,15 @@ function shipStatusClass(status: ExcelShipStatus) {
   return 'ship-enviado';
 }
 
+function readSheet(value: string | null): ExcelSheet {
+  if (value === 'Dropi' || value === 'Articos' || value === 'Evalook') return value;
+  return 'Dropi';
+}
+
 export function Exel() {
-  const { bump, notify } = useUi();
-  const [sheet, setSheet] = useState<ExcelSheet>('Dropi');
+  const { bump, notify, version } = useUi();
+  const [params, setParams] = useSearchParams();
+  const sheet = readSheet(params.get('hoja'));
   const [data, setData] = useState<ExcelModuleData | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -128,6 +135,11 @@ export function Exel() {
   const dateEnterRef = useRef(0);
 
   useEffect(() => {
+    if (params.get('hoja') === sheet) return;
+    setParams({ hoja: sheet }, { replace: true });
+  }, [params, sheet, setParams]);
+
+  useEffect(() => {
     let cancel = false;
     getExcelData(sheet)
       .then((next) => { if (!cancel) setData(next); })
@@ -135,9 +147,19 @@ export function Exel() {
         if (!cancel) setError(caught instanceof Error ? caught.message : 'No se pudo cargar Exel.');
       });
     return () => { cancel = true; };
-  }, [sheet]);
+  }, [sheet, version]);
 
-  useEffect(() => { scanRef.current?.focus(); }, [sheet, scanNote]);
+  useEffect(() => { scanRef.current?.focus(); }, [sheet]);
+
+  function selectSheet(name: ExcelSheet) {
+    if (name === sheet) return;
+    setParams({ hoja: name }, { replace: true });
+    setEditingId(null);
+    setForm(emptyForm());
+    setScanNote('');
+    setScanCode('');
+    setError('');
+  }
 
   const profitPreview = useMemo(() => (
     orderProfit(
@@ -407,7 +429,7 @@ export function Exel() {
               key={name}
               type="button"
               className={`channel-${data?.sheetChannel[name] || ''} ${sheet === name ? 'active' : ''}`}
-              onClick={() => { setSheet(name); resetForm(); setError(''); }}
+              onClick={() => selectSheet(name)}
             >
               {name}
             </button>

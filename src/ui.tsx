@@ -1,5 +1,5 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { getSequence } from './api';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { getRevision, getSequence } from './api';
 import { DamageModal } from './components/DamageModal';
 import { PrintPreview } from './components/PrintPreview';
 
@@ -26,6 +26,7 @@ export function UiProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [damageCode, setDamageCode] = useState<string | null>(null);
   const [printIds, setPrintIds] = useState<string[] | null>(null);
+  const lastRevision = useRef('');
 
   const bump = useCallback(() => setVersion((current) => current + 1), []);
   const openDamage = useCallback((qr = '') => setDamageCode(qr), []);
@@ -45,6 +46,56 @@ export function UiProvider({ children }: { children: React.ReactNode }) {
     }).catch(() => {});
     return () => { cancel = true; };
   }, [version]);
+
+  // Sincroniza otras sesiones abiertas sin recargar ni cambiar de ruta.
+  useEffect(() => {
+    let alive = true;
+    let pollTimer = 0;
+    let source: EventSource | null = null;
+
+    const applyRevision = (revision: string) => {
+      if (!alive || !revision) return;
+      if (!lastRevision.current) {
+        lastRevision.current = revision;
+        return;
+      }
+      if (revision === lastRevision.current) return;
+      lastRevision.current = revision;
+      bump();
+    };
+
+    const poll = async () => {
+      try {
+        const data = await getRevision();
+        applyRevision(data.revision);
+      } catch {
+        /* red temporal: se reintenta */
+      }
+    };
+
+    void poll();
+    pollTimer = window.setInterval(() => { void poll(); }, 2000);
+
+    try {
+      source = new EventSource('/api/events');
+      source.addEventListener('revision', (event) => {
+        try {
+          const payload = JSON.parse(String((event as MessageEvent).data || '{}')) as { revision?: string };
+          if (payload.revision) applyRevision(payload.revision);
+        } catch {
+          /* ignore malformed */
+        }
+      });
+    } catch {
+      /* el polling cubre si EventSource no está disponible */
+    }
+
+    return () => {
+      alive = false;
+      window.clearInterval(pollTimer);
+      source?.close();
+    };
+  }, [bump]);
 
   const value = useMemo(() => ({
     version, nextQr, bump, notify, openDamage, openPrint,

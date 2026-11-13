@@ -67,6 +67,13 @@ export function logout() {
 
 export const getDashboard = () => request<DashboardData>('/api/dashboard');
 export const getSequence = () => request<{ nextQr: string; nextNumber: number }>('/api/sequence');
+
+/** Lectura silenciosa para sincronizar sesiones (no cierra sesión si falla). */
+export async function getRevision() {
+  const response = await fetch('/api/revision', { credentials: 'same-origin' });
+  if (!response.ok) throw new Error('No se pudo leer la revisión.');
+  return response.json() as Promise<{ revision: string }>;
+}
 export const getReferences = () => request<Reference[]>('/api/references');
 export const getReference = (id: string) => request<Reference>(`/api/references/${id}`);
 export const getBodega = () => request<BodegaData>('/api/bodega');

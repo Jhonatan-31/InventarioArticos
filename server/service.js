@@ -24,10 +24,22 @@ function fail(status, message) {
   throw error;
 }
 
+function getDataRevision() {
+  const row = db.prepare(`SELECT value FROM meta WHERE key = 'data_revision'`).get();
+  return String(row?.value || '0');
+}
+
+function bumpDataRevision() {
+  const value = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+  db.prepare(`INSERT OR REPLACE INTO meta (key, value) VALUES ('data_revision', ?)`).run(value);
+  return value;
+}
+
 function transaction(work) {
   db.exec('BEGIN IMMEDIATE');
   try {
     const result = work();
+    bumpDataRevision();
     db.exec('COMMIT');
     return result;
   } catch (error) {
@@ -655,6 +667,7 @@ export const api = {
           id, code, name, color, size, line, notes, silhouette, material, location, price, image, created_at
         ) VALUES (?, ?, ?, ?, '', ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(id, code, name, color, line, notes, silhouette, material, location, price, image, now);
+      bumpDataRevision();
     } catch (error) {
       if (isUnique(error)) fail(400, 'Ya existe una referencia con ese código.');
       throw error;
@@ -701,6 +714,7 @@ export const api = {
       fail(400, 'Esta referencia ya tiene pares. Se conserva para no perder el historial.');
     }
     db.prepare(`DELETE FROM shoe_refs WHERE id = ?`).run(id);
+    bumpDataRevision();
     return { ok: true };
   },
 
@@ -1052,7 +1066,12 @@ export const api = {
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
     db.prepare(`INSERT INTO payments (id, channel, amount, note, created_at) VALUES (?, ?, ?, ?, ?)`).run(id, channel, value, text, now);
+    bumpDataRevision();
     return accountingData();
+  },
+
+  revision() {
+    return { revision: getDataRevision() };
   },
 
   excelData(sheet) {
@@ -1200,6 +1219,7 @@ export const api = {
     const current = db.prepare(`SELECT sheet FROM excel_orders WHERE id = ?`).get(String(id));
     if (!current) fail(404, 'El pedido del Excel no existe.');
     db.prepare(`DELETE FROM excel_orders WHERE id = ?`).run(String(id));
+    bumpDataRevision();
     return excelModuleData(current.sheet);
   },
 };

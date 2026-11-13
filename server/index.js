@@ -47,6 +47,37 @@ app.get('/api/sequence', (_req, res) => {
   res.json(api.sequence());
 });
 
+app.get('/api/revision', (_req, res) => {
+  res.json(api.revision());
+});
+
+/** Tiempo real entre sesiones abiertas (como Chikas Plus). */
+app.get('/api/events', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  if (typeof res.flushHeaders === 'function') res.flushHeaders();
+
+  let last = '';
+  const send = () => {
+    try {
+      const revision = api.revision().revision;
+      if (revision !== last) {
+        last = revision;
+        res.write(`event: revision\ndata: ${JSON.stringify({ revision })}\n\n`);
+      } else {
+        res.write(`: ping\n\n`);
+      }
+    } catch {
+      /* cliente puede haberse desconectado */
+    }
+  };
+
+  send();
+  const timer = setInterval(send, 1500);
+  req.on('close', () => clearInterval(timer));
+});
+
 app.get('/api/dashboard', (_req, res) => {
   res.json(api.dashboard());
 });

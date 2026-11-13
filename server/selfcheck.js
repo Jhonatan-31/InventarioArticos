@@ -157,6 +157,24 @@ try {
   assert(excel.summary.count === 0, 'se puede borrar un pedido de Exel');
   assert(api.lookup('00002').status === 'salida' && api.accounting().dropi.balance === 80000, 'Exel no altera saldos ni pares al borrar');
 
+  const beforeRev = api.revision().revision;
+  api.createExcelOrder({
+    sheet: 'Evalook',
+    guideNumber: 'G-200',
+    firstName: 'Luis',
+    lastName: 'Perez',
+    transport: 'TCC',
+    advisor: 'Maria',
+    shipStatus: 'Enviado',
+    costPrice: 10000,
+    salePrice: 40000,
+    shippingPrice: 5000,
+    orderDate: '2026-11-12',
+  });
+  const afterRev = api.revision().revision;
+  assert(beforeRev !== afterRev && Boolean(afterRev), 'cada cambio de Exel publica una revisión para sincronizar sesiones');
+  api.deleteExcelOrder(api.excelData('Evalook').summary.orders[0].id);
+
   const saved = new DatabaseSync(file, { readOnly: true });
   const onDisk = Number(saved.prepare(`SELECT COUNT(*) AS n FROM pairs`).get().n);
   const stockOnDisk = Number(saved.prepare(`SELECT COUNT(*) AS n FROM pairs WHERE status IN ('inventario', 'prioridad')`).get().n);
