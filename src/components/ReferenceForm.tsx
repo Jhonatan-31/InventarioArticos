@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Reference, ReferenceInput } from '../types';
+import { ImageLightbox } from './ImageLightbox';
 
 const lines = ['Dama', 'Caballero', 'Infantil', 'Unisex'];
 
@@ -68,6 +69,7 @@ export function ReferenceFields({
 }) {
   const set = (key: keyof ReferenceFormState, next: string) => onChange({ ...value, [key]: next });
   const [imageError, setImageError] = useState('');
+  const [previewOpen, setPreviewOpen] = useState(false);
   return (
     <div className="form-grid">
       <label className="field">
@@ -127,8 +129,26 @@ export function ReferenceFields({
           }}
         />
       </label>
-      {value.image && <img className="ref-preview" src={value.image} alt="" />}
+      {value.image && (
+        <button
+          type="button"
+          className="ref-preview"
+          onClick={() => setPreviewOpen(true)}
+          title="Ver imagen"
+          aria-label="Ver imagen de la referencia"
+        >
+          <img src={value.image} alt="" />
+        </button>
+      )}
       {imageError && <p className="form-error">{imageError}</p>}
+      {previewOpen && value.image && (
+        <ImageLightbox
+          src={value.image}
+          title={value.code || 'Referencia'}
+          subtitle={[value.name, value.color].filter(Boolean).join(' · ')}
+          onClose={() => setPreviewOpen(false)}
+        />
+      )}
     </div>
   );
 }

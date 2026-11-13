@@ -5,6 +5,7 @@ import type { PairBatch, Reference } from '../types';
 import { SHOE_SIZES, formatMoney } from '../format';
 import { useUi } from '../ui';
 import { PageHeader } from '../components/PageHeader';
+import { ImageLightbox } from '../components/ImageLightbox';
 
 export function Entrada() {
   const { version, nextQr, bump, notify, openPrint } = useUi();
@@ -16,6 +17,7 @@ export function Entrada() {
   const [batch, setBatch] = useState<PairBatch | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   useEffect(() => {
     const selected = params.get('referencia');
@@ -90,7 +92,17 @@ export function Entrada() {
         )}
         {reference && (
           <div className="pair-mini">
-            {reference.image && <img className="thumb" src={reference.image} alt="" />}
+            {reference.image && (
+              <button
+                type="button"
+                className="thumb"
+                onClick={() => setPreviewOpen(true)}
+                title={`Ver imagen de ${reference.code}`}
+                aria-label={`Ver imagen de ${reference.code}`}
+              >
+                <img src={reference.image} alt="" />
+              </button>
+            )}
             <strong>{reference.code}</strong>
             <span>{reference.name} · {reference.color} · {reference.line}</span>
             <span>
@@ -159,6 +171,14 @@ export function Entrada() {
             </button>
           </div>
         </section>
+      )}
+      {previewOpen && reference?.image && (
+        <ImageLightbox
+          src={reference.image}
+          title={`${reference.code} · ${reference.color}`}
+          subtitle={reference.name}
+          onClose={() => setPreviewOpen(false)}
+        />
       )}
     </div>
   );

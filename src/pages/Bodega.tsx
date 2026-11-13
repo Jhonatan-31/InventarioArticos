@@ -6,6 +6,7 @@ import { formatDay, formatMoney } from '../format';
 import { useUi } from '../ui';
 import { PageHeader } from '../components/PageHeader';
 import { Modal } from '../components/Modal';
+import { ImageLightbox } from '../components/ImageLightbox';
 import {
   emptyReferenceForm,
   ReferenceFields,
@@ -22,6 +23,7 @@ export function Bodega() {
   const [editing, setEditing] = useState<BodegaRow | null>(null);
   const [editForm, setEditForm] = useState<ReferenceFormState>(emptyReferenceForm);
   const [busy, setBusy] = useState(false);
+  const [preview, setPreview] = useState<BodegaRow | null>(null);
 
   useEffect(() => {
     let cancel = false;
@@ -119,7 +121,21 @@ export function Bodega() {
               )}
               {rows.map((row) => (
                 <tr key={row.id} className={row.priority > 0 ? 'priority' : ''}>
-                  <td>{row.image ? <img className="thumb" src={row.image} alt="" /> : <span className="thumb empty-thumb" />}</td>
+                  <td>
+                    {row.image ? (
+                      <button
+                        type="button"
+                        className="thumb"
+                        onClick={() => setPreview(row)}
+                        title={`Ver imagen de ${row.code}`}
+                        aria-label={`Ver imagen de ${row.code}`}
+                      >
+                        <img src={row.image} alt="" />
+                      </button>
+                    ) : (
+                      <span className="thumb empty-thumb" />
+                    )}
+                  </td>
                   <td className="left mono">{row.code}</td>
                   <td className="left">{row.name}</td>
                   <td className="left">{row.silhouette || '—'}</td>
@@ -183,6 +199,14 @@ export function Bodega() {
             </div>
           </form>
         </Modal>
+      )}
+      {preview?.image && (
+        <ImageLightbox
+          src={preview.image}
+          title={`${preview.code} · ${preview.color}`}
+          subtitle={`${preview.name}${preview.silhouette ? ` · ${preview.silhouette}` : ''}`}
+          onClose={() => setPreview(null)}
+        />
       )}
     </div>
   );
