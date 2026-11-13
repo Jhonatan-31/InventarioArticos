@@ -401,98 +401,6 @@ export function Exel() {
         )}
       </div>
 
-      <div className="panel filter-panel">
-        <div className="inventory-toolbar">
-          <input
-            className="search toolbar-search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Buscar guía, nombre, código…"
-            aria-label="Buscar en la hoja"
-          />
-          <div className="filter-ranges" role="tablist" aria-label="Periodo">
-            {DATE_RANGE_OPTIONS.map((item) => (
-              <button
-                key={item.key}
-                type="button"
-                className={dateRange === item.key ? 'active' : ''}
-                onClick={() => pickRange(item.key)}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-          <div className="filter-dates">
-            <input
-              type="date"
-              className="date-input"
-              value={dateFrom}
-              onChange={(event) => {
-                setDateFrom(event.target.value);
-                setDateRange('custom');
-                setMonthPick('');
-              }}
-              onKeyDown={(event) => handleDateFilterEnterKey(event, applyDateFilter, dateEnterRef)}
-              aria-label="Desde"
-              title="Desde — Enter siguiente · doble Enter filtrar"
-            />
-            <input
-              type="date"
-              className="date-input"
-              value={dateTo}
-              onChange={(event) => {
-                setDateTo(event.target.value);
-                setDateRange('custom');
-                setMonthPick('');
-              }}
-              onKeyDown={(event) => handleDateFilterEnterKey(event, applyDateFilter, dateEnterRef)}
-              aria-label="Hasta"
-              title="Hasta — Enter siguiente · doble Enter filtrar"
-            />
-            <button
-              type="button"
-              className="btn ghost filter-go"
-              disabled={!dateFrom && !dateTo}
-              onClick={applyDateFilter}
-            >
-              Filtrar
-            </button>
-          </div>
-          <label className="field exel-month-field">
-            <span className="sr-only">Mes</span>
-            <input
-              type="month"
-              className="date-input"
-              value={monthPick}
-              onChange={(event) => pickMonth(event.target.value)}
-              aria-label="Elegir mes"
-              title="Elegir mes completo"
-            />
-          </label>
-          <select
-            value={advisorFilter}
-            aria-label="Asesora"
-            onChange={(event) => setAdvisorFilter(event.target.value)}
-          >
-            <option value="">Todas las asesoras</option>
-            {advisorOptions.map((name) => (
-              <option key={name} value={name}>{name}</option>
-            ))}
-          </select>
-          <select
-            value={transportFilter}
-            aria-label="Transportadora"
-            onChange={(event) => setTransportFilter(event.target.value)}
-          >
-            <option value="">Todas las transportadoras</option>
-            {TRANSPORTS.map((item) => (
-              <option key={item} value={item}>{item}</option>
-            ))}
-          </select>
-          <button type="button" className="btn ghost" onClick={clearSheetFilters}>Limpiar</button>
-        </div>
-      </div>
-
       {error && <p className="form-error">{error}</p>}
 
       <section className="panel exel-entry">
@@ -610,6 +518,103 @@ export function Exel() {
             )}
           </div>
         </form>
+      </section>
+
+      <section className="panel exel-filters" aria-label="Filtros de la hoja">
+        <header className="panel-head">
+          <h2>Filtros de la hoja</h2>
+          <span className="muted">{filteredOrders.length} visibles</span>
+        </header>
+        <div className="exel-filter-rows">
+          <div className="exel-filter-row">
+            <input
+              className="search exel-filter-search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Buscar guía, nombre, código…"
+              aria-label="Buscar en la hoja"
+            />
+            <div className="filter-ranges" role="tablist" aria-label="Periodo">
+              {DATE_RANGE_OPTIONS.map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  className={dateRange === item.key ? 'active' : ''}
+                  onClick={() => pickRange(item.key)}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="exel-filter-row">
+            <div className="filter-dates">
+              <input
+                type="date"
+                className="date-input"
+                value={dateFrom}
+                onChange={(event) => {
+                  setDateFrom(event.target.value);
+                  setDateRange('custom');
+                  setMonthPick('');
+                }}
+                onKeyDown={(event) => handleDateFilterEnterKey(event, applyDateFilter, dateEnterRef)}
+                aria-label="Desde"
+                title="Desde — Enter siguiente · doble Enter filtrar"
+              />
+              <input
+                type="date"
+                className="date-input"
+                value={dateTo}
+                onChange={(event) => {
+                  setDateTo(event.target.value);
+                  setDateRange('custom');
+                  setMonthPick('');
+                }}
+                onKeyDown={(event) => handleDateFilterEnterKey(event, applyDateFilter, dateEnterRef)}
+                aria-label="Hasta"
+                title="Hasta — Enter siguiente · doble Enter filtrar"
+              />
+              <button
+                type="button"
+                className="btn ghost filter-go"
+                disabled={!dateFrom && !dateTo}
+                onClick={applyDateFilter}
+              >
+                Filtrar
+              </button>
+            </div>
+            <input
+              type="month"
+              className="date-input exel-month-input"
+              value={monthPick}
+              onChange={(event) => pickMonth(event.target.value)}
+              aria-label="Elegir mes"
+              title="Elegir mes completo"
+            />
+            <select
+              value={advisorFilter}
+              aria-label="Asesora"
+              onChange={(event) => setAdvisorFilter(event.target.value)}
+            >
+              <option value="">Todas las asesoras</option>
+              {advisorOptions.map((name) => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </select>
+            <select
+              value={transportFilter}
+              aria-label="Transportadora"
+              onChange={(event) => setTransportFilter(event.target.value)}
+            >
+              <option value="">Todas las transportadoras</option>
+              {TRANSPORTS.map((item) => (
+                <option key={item} value={item}>{item}</option>
+              ))}
+            </select>
+            <button type="button" className="btn ghost" onClick={clearSheetFilters}>Limpiar</button>
+          </div>
+        </div>
       </section>
 
       <section className="panel exel-sheet">

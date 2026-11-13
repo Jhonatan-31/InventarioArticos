@@ -560,8 +560,45 @@ a { color: var(--cognac-deep); }
 .exel-status-select:disabled { opacity: 0.7; cursor: wait; }
 .exel-table tr.exel-return td { background: #fff5f5; }
 .exel-table .exel-loss { color: #b91c1c; font-weight: 700; }
-.exel-month-field { margin: 0; min-width: 150px; }
-.exel-page .filter-panel { width: 100%; }
+.exel-filters { width: 100%; }
+.exel-filter-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+.exel-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.exel-filter-search {
+  flex: 1 1 220px;
+  min-width: 180px;
+  max-width: 340px;
+}
+.exel-filter-row > select,
+.exel-month-input {
+  height: 40px;
+  min-height: 40px;
+  border: 1px solid #ddcfc0;
+  border-radius: 10px;
+  background: #fff;
+  padding: 0 10px;
+  font-size: 13px;
+  min-width: 150px;
+}
+.exel-filter-row .filter-ranges,
+.exel-filter-row .filter-dates {
+  flex: 1 1 auto;
+}
+.exel-filter-row .btn {
+  height: 40px;
+  min-height: 40px;
+  padding: 0 14px;
+}
 .sr-only {
   position: absolute;
   width: 1px;
