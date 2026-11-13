@@ -669,7 +669,7 @@ export const api = {
       `).run(id, code, name, color, line, notes, silhouette, material, location, price, image, now);
       bumpDataRevision();
     } catch (error) {
-      if (isUnique(error)) fail(400, 'Ya existe una referencia con ese código.');
+      if (isUnique(error)) fail(400, 'Ya existe esa referencia con el mismo color. Puedes repetir la referencia si el color es distinto.');
       throw error;
     }
     return listRefs().find((item) => item.id === id);
@@ -700,7 +700,7 @@ export const api = {
         `).run(id);
       });
     } catch (error) {
-      if (isUnique(error)) fail(400, 'Ya existe una referencia con ese código.');
+      if (isUnique(error)) fail(400, 'Ya existe esa referencia con el mismo color. Puedes repetir la referencia si el color es distinto.');
       throw error;
     }
     return listRefs().find((item) => item.id === id);

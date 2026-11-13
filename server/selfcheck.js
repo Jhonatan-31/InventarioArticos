@@ -35,6 +35,28 @@ try {
   assert(first.from === '00001' && first.to === '00003' && first.quantity === 3, 'el ingreso por talla usa 00001 a 00003');
   assert(first.pairs[0].payload === '00001' && first.pairs[0].size === '40', 'el código de barras es el número y conserva la talla');
 
+  const oxfordNegro = api.createReference({
+    code: 'ox-40',
+    name: 'Oxford clásico',
+    color: 'Negro',
+    line: 'Caballero',
+    price: 82000,
+  });
+  assert(oxfordNegro.code === 'OX-40' && oxfordNegro.color === 'Negro', 'la misma referencia puede existir con otro color');
+  let sameColorBlocked = false;
+  try {
+    api.createReference({
+      code: 'ox-40',
+      name: 'Oxford clásico',
+      color: 'Miel',
+      line: 'Caballero',
+      price: 80000,
+    });
+  } catch {
+    sameColorBlocked = true;
+  }
+  assert(sameColorBlocked, 'no se puede repetir la misma referencia con el mismo color');
+
   const mocasin = api.createReference({
     code: 'MO-37',
     name: 'Mocasín',
@@ -111,7 +133,7 @@ try {
   assert(stock.items.length === 1 && stock.items[0].status === 'prioridad', 'el inventario muestra el prioritario');
 
   const grid = api.bodega();
-  const oxfordRow = grid.rows.find((row) => row.code === 'OX-40');
+  const oxfordRow = grid.rows.find((row) => row.id === oxford.id);
   assert(oxfordRow.stockBySize['40'] === 1 && oxfordRow.stockBySize['41'] === 1, 'la bodega suma un par por talla 40 y 41');
   assert(oxfordRow.inStock === 2 && oxfordRow.stockValue === 160000, 'el valor de la referencia es precio por existencia');
   assert(grid.totals.pairs === 2 && grid.totals.value === 160000, 'el total de bodega suma las referencias con existencia');

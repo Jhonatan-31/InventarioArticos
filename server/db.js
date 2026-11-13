@@ -82,6 +82,45 @@ function migratePaymentsChannels() {
   `);
 }
 
+function migrateRefsCodeColorUnique() {
+  const row = database.prepare(`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'shoe_refs'`).get();
+  const sql = String(row?.sql || '');
+  if (!sql) return;
+  const hasCodeOnlyUnique = /\bcode\s+TEXT\s+NOT\s+NULL\s+UNIQUE\b/i.test(sql);
+  if (!hasCodeOnlyUnique) return;
+
+  database.exec(`
+    PRAGMA foreign_keys = OFF;
+    CREATE TABLE shoe_refs_mig (
+      id TEXT PRIMARY KEY,
+      code TEXT NOT NULL,
+      name TEXT NOT NULL,
+      color TEXT NOT NULL DEFAULT '',
+      size TEXT NOT NULL DEFAULT '',
+      line TEXT NOT NULL DEFAULT '',
+      notes TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL,
+      silhouette TEXT NOT NULL DEFAULT '',
+      material TEXT NOT NULL DEFAULT '',
+      location TEXT NOT NULL DEFAULT '',
+      price INTEGER NOT NULL DEFAULT 0,
+      image TEXT NOT NULL DEFAULT ''
+    );
+    INSERT INTO shoe_refs_mig (
+      id, code, name, color, size, line, notes, created_at, silhouette, material, location, price, image
+    )
+    SELECT
+      id, code, name, color, size, line, notes, created_at,
+      COALESCE(silhouette, ''), COALESCE(material, ''), COALESCE(location, ''),
+      COALESCE(price, 0), COALESCE(image, '')
+    FROM shoe_refs;
+    DROP TABLE shoe_refs;
+    ALTER TABLE shoe_refs_mig RENAME TO shoe_refs;
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_shoe_refs_code_color ON shoe_refs(code, color COLLATE NOCASE);
+    PRAGMA foreign_keys = ON;
+  `);
+}
+
 function migrateExcelSheetsLuciBot() {
   const row = database.prepare(`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'excel_orders'`).get();
   const sql = String(row?.sql || '');
@@ -145,7 +184,7 @@ PRAGMA busy_timeout = 5000;
 
 CREATE TABLE IF NOT EXISTS shoe_refs (
   id TEXT PRIMARY KEY,
-  code TEXT NOT NULL UNIQUE,
+  code TEXT NOT NULL,
   name TEXT NOT NULL,
   color TEXT NOT NULL DEFAULT '',
   size TEXT NOT NULL DEFAULT '',
@@ -209,6 +248,10 @@ export function getDb() {
   addColumn('shoe_refs', 'location', `TEXT NOT NULL DEFAULT ''`);
   addColumn('shoe_refs', 'price', `INTEGER NOT NULL DEFAULT 0`);
   addColumn('shoe_refs', 'image', `TEXT NOT NULL DEFAULT ''`);
+  migrateRefsCodeColorUnique();
+  database.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_shoe_refs_code_color ON shoe_refs(code, color COLLATE NOCASE);
+  `);
   addColumn('pairs', 'size', `TEXT NOT NULL DEFAULT ''`);
   addColumn('pairs', 'channel', 'TEXT');
   addColumn('movements', 'amount', `INTEGER NOT NULL DEFAULT 0`);

@@ -88,7 +88,7 @@ export function References() {
       <PageHeader
         eyebrow="Catálogo"
         title="Referencias"
-        text="Crea la referencia (por ejemplo 575). Luego ingresa los pares de una factura y el sistema genera un código único por cada par. Esos códigos nunca se reutilizan."
+        text="Puedes repetir la misma referencia con otro color (por ejemplo LINNER negro y LINNER miel). Lo que no se puede repetir es la misma referencia con el mismo color. Cada par sigue teniendo su código único."
       />
       <section className="panel">
         <header className="panel-head"><h2>Nueva referencia</h2></header>
