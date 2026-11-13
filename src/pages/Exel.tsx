@@ -15,6 +15,25 @@ import {
   resolveMonthRange,
 } from '../dateFilterEnter';
 import { channelLabel, formatMoney } from '../format';
+
+function formatSheetDate(value: string) {
+  const text = String(value || '').trim();
+  if (!text) return '—';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+    const [year, month, day] = text.split('-');
+    return `${day}/${month}/${year}`;
+  }
+  return text;
+}
+
+function formatPersonName(value: string) {
+  const text = String(value || '').trim().replace(/\s+/g, ' ');
+  if (!text) return '—';
+  return text
+    .split(' ')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(' ');
+}
 import type { ExcelModuleData, ExcelOrder, ExcelSheet, ExcelShipStatus } from '../types';
 import { useUi } from '../ui';
 import { PageHeader } from '../components/PageHeader';
@@ -667,7 +686,7 @@ export function Exel() {
                   <td>{order.firstName}</td>
                   <td>{order.lastName}</td>
                   <td>{order.transport || '—'}</td>
-                  <td>{order.advisor || '—'}</td>
+                  <td className="exel-col-advisor">{formatPersonName(order.advisor)}</td>
                   <td>
                     <select
                       className={`exel-status-select ${shipStatusClass(order.shipStatus)}`}
@@ -684,7 +703,7 @@ export function Exel() {
                   <td className="money">{formatMoney(order.costPrice)}</td>
                   <td className="money">{formatMoney(order.salePrice)}</td>
                   <td className="money">{formatMoney(order.shippingPrice)}</td>
-                  <td>{order.orderDate}</td>
+                  <td className="exel-col-date">{formatSheetDate(order.orderDate)}</td>
                   <td className={`money ${order.profit < 0 ? 'exel-loss' : ''}`}>{formatMoney(order.profit)}</td>
                   <td>
                     <div className="row-actions">

@@ -560,6 +560,20 @@ a { color: var(--cognac-deep); }
 .exel-status-select:disabled { opacity: 0.7; cursor: wait; }
 .exel-table tr.exel-return td { background: #fff5f5; }
 .exel-table .exel-loss { color: #b91c1c; font-weight: 700; }
+.exel-table .exel-col-advisor {
+  font-weight: 650;
+  white-space: nowrap;
+  min-width: 128px;
+  color: var(--ink);
+}
+.exel-table .exel-col-date {
+  white-space: nowrap;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  min-width: 104px;
+  color: var(--ink);
+}
 .exel-filters { width: 100%; }
 .exel-filter-rows {
   display: flex;
