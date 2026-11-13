@@ -85,3 +85,16 @@ export const DATE_RANGE_OPTIONS: Array<{ key: DateRangeKey; label: string }> = [
   { key: '30', label: '30 días' },
   { key: 'month', label: 'Este mes' },
 ];
+
+/** Mes AAAA-MM → primer y último día de ese mes. */
+export function resolveMonthRange(monthValue: string): { from: string; to: string } {
+  const match = /^(\d{4})-(\d{2})$/.exec(String(monthValue || '').trim());
+  if (!match) return { from: '', to: '' };
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  if (!year || month < 1 || month > 12) return { from: '', to: '' };
+  const from = `${match[1]}-${match[2]}-01`;
+  const last = new Date(year, month, 0).getDate();
+  const to = `${match[1]}-${match[2]}-${String(last).padStart(2, '0')}`;
+  return { from, to };
+}

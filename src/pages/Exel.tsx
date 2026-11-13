@@ -6,6 +6,13 @@ import {
   getExcelData,
   updateExcelOrder,
 } from '../api';
+import {
+  DATE_RANGE_OPTIONS,
+  type DateRangeKey,
+  handleDateFilterEnterKey,
+  resolveDateRange,
+  resolveMonthRange,
+} from '../dateFilterEnter';
 import { channelLabel, formatMoney } from '../format';
 import type { ExcelModuleData, ExcelOrder, ExcelSheet, ExcelShipStatus } from '../types';
 import { useUi } from '../ui';
@@ -65,15 +72,16 @@ function normalizeTransport(value: string) {
   return hit || '';
 }
 
-function ShipStatusPill({ status }: { status: ExcelShipStatus }) {
-  const klass = status === 'Devolución'
-    ? 'ship-devolucion'
-    : status === 'Problema'
-      ? 'ship-problema'
-      : status === 'Entregado'
-        ? 'ship-entregado'
-        : 'ship-enviado';
-  return <span className={`pill ${klass}`}>{status}</span>;
+function orderProfit(cost: number, sale: number, shipping: number, status: ExcelShipStatus) {
+  if (status === 'Devolución') return -shipping;
+  return sale - cost - shipping;
+}
+
+function shipStatusClass(status: ExcelShipStatus) {
+  if (status === 'Devolución') return 'ship-devolucion';
+  if (status === 'Problema') return 'ship-problema';
+  if (status === 'Entregado') return 'ship-entregado';
+  return 'ship-enviado';
 }
 
 export function Exel() {
@@ -87,7 +95,17 @@ export function Exel() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [query, setQuery] = useState('');
+  const [advisorFilter, setAdvisorFilter] = useState('');
+  const [transportFilter, setTransportFilter] = useState('');
+  const [dateRange, setDateRange] = useState<DateRangeKey>('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [appliedFrom, setAppliedFrom] = useState('');
+  const [appliedTo, setAppliedTo] = useState('');
+  const [monthPick, setMonthPick] = useState('');
+  const [statusBusyId, setStatusBusyId] = useState<string | null>(null);
   const scanRef = useRef<HTMLInputElement>(null);
+  const dateEnterRef = useRef(0);
 
   useEffect(() => {
     let cancel = false;
@@ -102,19 +120,93 @@ export function Exel() {
   useEffect(() => { scanRef.current?.focus(); }, [sheet, scanNote]);
 
   const profitPreview = useMemo(() => (
-    moneyNumber(form.salePrice) - moneyNumber(form.costPrice) - moneyNumber(form.shippingPrice)
-  ), [form.salePrice, form.costPrice, form.shippingPrice]);
+    orderProfit(
+      moneyNumber(form.costPrice),
+      moneyNumber(form.salePrice),
+      moneyNumber(form.shippingPrice),
+      form.shipStatus,
+    )
+  ), [form.salePrice, form.costPrice, form.shippingPrice, form.shipStatus]);
+
+  const advisorOptions = useMemo(() => {
+    const names = new Set<string>();
+    (data?.summary.orders || []).forEach((row) => {
+      const name = row.advisor.trim();
+      if (name) names.add(name);
+    });
+    (data?.people || []).forEach((person) => {
+      const name = person.advisor.trim();
+      if (name) names.add(name);
+    });
+    return Array.from(names).sort((a, b) => a.localeCompare(b, 'es'));
+  }, [data]);
 
   const filteredOrders = useMemo(() => {
     const rows = data?.summary.orders || [];
     const q = query.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter((row) => (
-      `${row.guideNumber} ${row.firstName} ${row.lastName} ${row.transport} ${row.advisor} ${row.qrCode || ''} ${row.shipStatus}`
+    return rows.filter((row) => {
+      if (advisorFilter && row.advisor.trim().toLowerCase() !== advisorFilter.trim().toLowerCase()) return false;
+      if (transportFilter && row.transport !== transportFilter) return false;
+      if (appliedFrom && row.orderDate < appliedFrom) return false;
+      if (appliedTo && row.orderDate > appliedTo) return false;
+      if (!q) return true;
+      return `${row.guideNumber} ${row.firstName} ${row.lastName} ${row.transport} ${row.advisor} ${row.qrCode || ''} ${row.shipStatus}`
         .toLowerCase()
-        .includes(q)
-    ));
-  }, [data, query]);
+        .includes(q);
+    });
+  }, [data, query, advisorFilter, transportFilter, appliedFrom, appliedTo]);
+
+  const filteredProfit = useMemo(
+    () => filteredOrders.reduce((sum, row) => sum + row.profit, 0),
+    [filteredOrders],
+  );
+
+  function applyDateFilter() {
+    setAppliedFrom(dateFrom);
+    setAppliedTo(dateTo);
+    setDateRange(dateFrom || dateTo ? 'custom' : 'all');
+    setMonthPick('');
+  }
+
+  function pickRange(key: DateRangeKey) {
+    const range = resolveDateRange(key);
+    setDateRange(key);
+    setDateFrom(range.from);
+    setDateTo(range.to);
+    setAppliedFrom(range.from);
+    setAppliedTo(range.to);
+    setMonthPick('');
+  }
+
+  function pickMonth(value: string) {
+    setMonthPick(value);
+    if (!value) {
+      setDateRange('all');
+      setDateFrom('');
+      setDateTo('');
+      setAppliedFrom('');
+      setAppliedTo('');
+      return;
+    }
+    const range = resolveMonthRange(value);
+    setDateRange('custom');
+    setDateFrom(range.from);
+    setDateTo(range.to);
+    setAppliedFrom(range.from);
+    setAppliedTo(range.to);
+  }
+
+  function clearSheetFilters() {
+    setQuery('');
+    setAdvisorFilter('');
+    setTransportFilter('');
+    setDateFrom('');
+    setDateTo('');
+    setAppliedFrom('');
+    setAppliedTo('');
+    setDateRange('all');
+    setMonthPick('');
+  }
 
   function applyPerson(personId: string) {
     const person = data?.people.find((item) => item.id === personId);
@@ -252,7 +344,32 @@ export function Exel() {
     }
   }
 
+  async function changeStatus(order: ExcelOrder, shipStatus: ExcelShipStatus) {
+    if (order.shipStatus === shipStatus) return;
+    setStatusBusyId(order.id);
+    setError('');
+    try {
+      const next = await updateExcelOrder(order.id, { shipStatus });
+      setData(next);
+      if (editingId === order.id) {
+        setForm((current) => ({ ...current, shipStatus }));
+      }
+      bump();
+      notify(
+        shipStatus === 'Devolución'
+          ? `Devolución marcada: se resta el envío (${formatMoney(order.shippingPrice)}) del total.`
+          : `Estado actualizado a ${shipStatus}.`,
+        'ok',
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'No se pudo actualizar el estado.');
+    } finally {
+      setStatusBusyId(null);
+    }
+  }
+
   const channel = data?.sheetChannel[sheet];
+  const shipStatuses = data?.shipStatuses || ['Enviado', 'Problema', 'Devolución', 'Entregado'];
 
   return (
     <div className="stack page exel-page">
@@ -277,11 +394,103 @@ export function Exel() {
         </div>
         {data && (
           <div className="exel-toolbar-meta">
-            <span>{data.summary.count} filas</span>
-            <strong>{formatMoney(data.summary.totalProfit)}</strong>
+            <span>{filteredOrders.length} de {data.summary.count} filas</span>
+            <strong>{formatMoney(filteredProfit)}</strong>
             {channel && <small>Canal {channelLabel[channel]}</small>}
           </div>
         )}
+      </div>
+
+      <div className="panel filter-panel">
+        <div className="inventory-toolbar">
+          <input
+            className="search toolbar-search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Buscar guía, nombre, código…"
+            aria-label="Buscar en la hoja"
+          />
+          <div className="filter-ranges" role="tablist" aria-label="Periodo">
+            {DATE_RANGE_OPTIONS.map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                className={dateRange === item.key ? 'active' : ''}
+                onClick={() => pickRange(item.key)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+          <div className="filter-dates">
+            <input
+              type="date"
+              className="date-input"
+              value={dateFrom}
+              onChange={(event) => {
+                setDateFrom(event.target.value);
+                setDateRange('custom');
+                setMonthPick('');
+              }}
+              onKeyDown={(event) => handleDateFilterEnterKey(event, applyDateFilter, dateEnterRef)}
+              aria-label="Desde"
+              title="Desde — Enter siguiente · doble Enter filtrar"
+            />
+            <input
+              type="date"
+              className="date-input"
+              value={dateTo}
+              onChange={(event) => {
+                setDateTo(event.target.value);
+                setDateRange('custom');
+                setMonthPick('');
+              }}
+              onKeyDown={(event) => handleDateFilterEnterKey(event, applyDateFilter, dateEnterRef)}
+              aria-label="Hasta"
+              title="Hasta — Enter siguiente · doble Enter filtrar"
+            />
+            <button
+              type="button"
+              className="btn ghost filter-go"
+              disabled={!dateFrom && !dateTo}
+              onClick={applyDateFilter}
+            >
+              Filtrar
+            </button>
+          </div>
+          <label className="field exel-month-field">
+            <span className="sr-only">Mes</span>
+            <input
+              type="month"
+              className="date-input"
+              value={monthPick}
+              onChange={(event) => pickMonth(event.target.value)}
+              aria-label="Elegir mes"
+              title="Elegir mes completo"
+            />
+          </label>
+          <select
+            value={advisorFilter}
+            aria-label="Asesora"
+            onChange={(event) => setAdvisorFilter(event.target.value)}
+          >
+            <option value="">Todas las asesoras</option>
+            {advisorOptions.map((name) => (
+              <option key={name} value={name}>{name}</option>
+            ))}
+          </select>
+          <select
+            value={transportFilter}
+            aria-label="Transportadora"
+            onChange={(event) => setTransportFilter(event.target.value)}
+          >
+            <option value="">Todas las transportadoras</option>
+            {TRANSPORTS.map((item) => (
+              <option key={item} value={item}>{item}</option>
+            ))}
+          </select>
+          <button type="button" className="btn ghost" onClick={clearSheetFilters}>Limpiar</button>
+        </div>
       </div>
 
       {error && <p className="form-error">{error}</p>}
@@ -365,7 +574,7 @@ export function Exel() {
           <label className="field">
             <span>Estado de envío</span>
             <select value={form.shipStatus} onChange={(event) => setForm({ ...form, shipStatus: event.target.value as ExcelShipStatus })}>
-              {(data?.shipStatuses || ['Enviado', 'Problema', 'Devolución', 'Entregado']).map((status) => (
+              {shipStatuses.map((status) => (
                 <option key={status} value={status}>{status}</option>
               ))}
             </select>
@@ -406,10 +615,7 @@ export function Exel() {
       <section className="panel exel-sheet">
         <header className="panel-head">
           <h2>Hoja {sheet}</h2>
-          <label className="field exel-search">
-            <span className="sr-only">Buscar</span>
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar en la hoja…" />
-          </label>
+          <span className="muted">{filteredOrders.length} visibles</span>
         </header>
 
         <div className="exel-sheet-wrap">
@@ -434,23 +640,41 @@ export function Exel() {
             <tbody>
               {!filteredOrders.length && (
                 <tr>
-                  <td colSpan={13}>Todavía no hay filas en {sheet}. Digita arriba y agrega a la hoja.</td>
+                  <td colSpan={13}>No hay filas con estos filtros en {sheet}.</td>
                 </tr>
               )}
               {filteredOrders.map((order, index) => (
-                <tr key={order.id} className={index % 2 ? 'exel-alt' : undefined}>
+                <tr
+                  key={order.id}
+                  className={[
+                    index % 2 ? 'exel-alt' : '',
+                    order.shipStatus === 'Devolución' ? 'exel-return' : '',
+                  ].filter(Boolean).join(' ') || undefined}
+                >
                   <td>{order.qrCode || order.id.slice(0, 8)}</td>
                   <td>{order.guideNumber || '—'}</td>
                   <td>{order.firstName}</td>
                   <td>{order.lastName}</td>
                   <td>{order.transport || '—'}</td>
                   <td>{order.advisor || '—'}</td>
-                  <td><ShipStatusPill status={order.shipStatus} /></td>
+                  <td>
+                    <select
+                      className={`exel-status-select ${shipStatusClass(order.shipStatus)}`}
+                      value={order.shipStatus}
+                      disabled={statusBusyId === order.id || busy}
+                      aria-label={`Estado de ${order.firstName} ${order.lastName}`}
+                      onChange={(event) => void changeStatus(order, event.target.value as ExcelShipStatus)}
+                    >
+                      {shipStatuses.map((status) => (
+                        <option key={status} value={status}>{status}</option>
+                      ))}
+                    </select>
+                  </td>
                   <td className="money">{formatMoney(order.costPrice)}</td>
                   <td className="money">{formatMoney(order.salePrice)}</td>
                   <td className="money">{formatMoney(order.shippingPrice)}</td>
                   <td>{order.orderDate}</td>
-                  <td className="money">{formatMoney(order.profit)}</td>
+                  <td className={`money ${order.profit < 0 ? 'exel-loss' : ''}`}>{formatMoney(order.profit)}</td>
                   <td>
                     <div className="row-actions">
                       <button type="button" className="btn ghost" onClick={() => loadOrder(order)}>Editar</button>
@@ -460,11 +684,13 @@ export function Exel() {
                 </tr>
               ))}
             </tbody>
-            {!!filteredOrders.length && data && (
+            {!!filteredOrders.length && (
               <tfoot>
                 <tr>
-                  <td colSpan={11}>Total de ganancias</td>
-                  <td className="money"><strong>{formatMoney(data.summary.totalProfit)}</strong></td>
+                  <td colSpan={11}>Total de ganancias (filtro actual)</td>
+                  <td className={`money ${filteredProfit < 0 ? 'exel-loss' : ''}`}>
+                    <strong>{formatMoney(filteredProfit)}</strong>
+                  </td>
                   <td></td>
                 </tr>
               </tfoot>

@@ -469,8 +469,10 @@ function cleanOrderDate(value) {
   return text;
 }
 
-function profitOf(cost, sale, shipping) {
-  return sale - cost - shipping;
+function profitOf(cost, sale, shipping, shipStatus) {
+  // En devolución solo se resta el envío al total de ganancias.
+  if (shipStatus === 'Devolución') return -Number(shipping || 0);
+  return Number(sale || 0) - Number(cost || 0) - Number(shipping || 0);
 }
 
 function mapExcelPerson(row) {
@@ -489,6 +491,7 @@ function mapExcelOrder(row) {
   const cost = Number(row.cost_price || 0);
   const sale = Number(row.sale_price || 0);
   const shipping = Number(row.shipping_price || 0);
+  const shipStatus = row.ship_status;
   return {
     id: row.id,
     sheet: row.sheet,
@@ -497,11 +500,11 @@ function mapExcelOrder(row) {
     lastName: row.last_name || '',
     transport: row.transport || '',
     advisor: row.advisor || '',
-    shipStatus: row.ship_status,
+    shipStatus,
     costPrice: cost,
     salePrice: sale,
     shippingPrice: shipping,
-    profit: profitOf(cost, sale, shipping),
+    profit: profitOf(cost, sale, shipping, shipStatus),
     orderDate: row.order_date,
     pairId: row.pair_id || null,
     personId: row.person_id || null,

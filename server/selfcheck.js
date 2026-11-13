@@ -146,6 +146,13 @@ try {
   assert(again.person?.firstName === 'Ana' && again.suggested.lastName === 'Rojas', 'el segundo escaneo trae los datos de la persona');
   excel = api.updateExcelOrder(excel.summary.orders[0].id, { shipStatus: 'Entregado' });
   assert(excel.summary.orders[0].shipStatus === 'Entregado', 'se puede actualizar el estado de envío en Exel');
+  excel = api.updateExcelOrder(excel.summary.orders[0].id, { shipStatus: 'Devolución' });
+  assert(
+    excel.summary.orders[0].profit === -10000 && excel.summary.totalProfit === -10000,
+    'en devolución la ganancia resta solo el envío al total',
+  );
+  excel = api.updateExcelOrder(excel.summary.orders[0].id, { shipStatus: 'Enviado' });
+  assert(excel.summary.orders[0].profit === 50000, 'al quitar devolución vuelve la ganancia normal');
   excel = api.deleteExcelOrder(excel.summary.orders[0].id);
   assert(excel.summary.count === 0, 'se puede borrar un pedido de Exel');
   assert(api.lookup('00002').status === 'salida' && api.accounting().dropi.balance === 80000, 'Exel no altera saldos ni pares al borrar');
