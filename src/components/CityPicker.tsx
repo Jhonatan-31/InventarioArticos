@@ -14,47 +14,56 @@ type Props = {
   onPick: (next: { city: string; department: string; code: string }) => void;
 };
 
+const ALL_CITIES = [...COLOMBIA_CITIES].sort(
+  (a, b) => a.city.localeCompare(b.city, 'es') || a.department.localeCompare(b.department, 'es'),
+);
+
 export function CityPicker({ city, department, cityCode = '', disabled, onPick }: Props) {
-  const [query, setQuery] = useState(city ? (department ? `${city} — ${department}` : city) : '');
+  const selected = cityCode
+    ? findColombiaCity(cityCode)
+    : (city ? findColombiaCity(`${city}, ${department}`) || findColombiaCity(city) : null);
+  const selectedLabel = selected
+    ? cityOptionLabel(selected)
+    : (city ? (department ? `${city} — ${department}` : city) : '');
+
+  const [query, setQuery] = useState(selectedLabel);
   const [open, setOpen] = useState(false);
+  const [browsing, setBrowsing] = useState(true);
   const rootRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const selected = cityCode ? findColombiaCity(cityCode) : (city ? findColombiaCity(`${city}, ${department}`) : null);
-    if (selected) {
-      setQuery(cityOptionLabel(selected));
-      return;
-    }
-    if (!city) {
-      setQuery('');
-      return;
-    }
-    setQuery(department ? `${city} — ${department}` : city);
-  }, [city, department, cityCode]);
+    setQuery(selectedLabel);
+    setBrowsing(true);
+  }, [selectedLabel]);
 
   useEffect(() => {
     function onDoc(event: MouseEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+        setBrowsing(true);
+        setQuery(selectedLabel);
+      }
     }
     document.addEventListener('mousedown', onDoc);
     return () => document.removeEventListener('mousedown', onDoc);
-  }, []);
+  }, [selectedLabel]);
 
   const matches = useMemo(() => {
+    if (browsing) return ALL_CITIES;
     const q = query.trim().toLowerCase();
-    if (!q || q.length < 1) return COLOMBIA_CITIES.slice(0, 40);
-    return COLOMBIA_CITIES
-      .filter((item) => (
-        item.city.toLowerCase().includes(q)
-        || item.department.toLowerCase().includes(q)
-        || cityOptionLabel(item).toLowerCase().includes(q)
-        || item.code.includes(q)
-      ))
-      .slice(0, 80);
-  }, [query]);
+    if (!q) return ALL_CITIES;
+    return ALL_CITIES.filter((item) => (
+      item.city.toLowerCase().includes(q)
+      || item.department.toLowerCase().includes(q)
+      || cityOptionLabel(item).toLowerCase().includes(q)
+      || item.code.includes(q)
+    ));
+  }, [browsing, query]);
 
   function pick(item: ColombiaCity) {
     setQuery(cityOptionLabel(item));
+    setBrowsing(true);
     setOpen(false);
     onPick({ city: item.city, department: item.department, code: item.code });
   }
@@ -64,20 +73,32 @@ export function CityPicker({ city, department, cityCode = '', disabled, onPick }
       <label className="field">
         <span>Ciudad / municipio</span>
         <input
+          ref={inputRef}
           value={query}
           disabled={disabled}
-          placeholder="Escribe para buscar en toda Colombia…"
+          placeholder="Buscar o elegir municipio de Colombia…"
           autoComplete="off"
-          onFocus={() => setOpen(true)}
-          onChange={(event) => {
-            setQuery(event.target.value);
+          onFocus={() => {
             setOpen(true);
-            if (!event.target.value.trim()) {
+            setBrowsing(true);
+            setQuery(selectedLabel);
+            requestAnimationFrame(() => inputRef.current?.select());
+          }}
+          onChange={(event) => {
+            const value = event.target.value;
+            setQuery(value);
+            setBrowsing(false);
+            setOpen(true);
+            if (!value.trim()) {
               onPick({ city: '', department: '', code: '' });
             }
           }}
           onKeyDown={(event) => {
-            if (event.key === 'Escape') setOpen(false);
+            if (event.key === 'Escape') {
+              setOpen(false);
+              setBrowsing(true);
+              setQuery(selectedLabel);
+            }
             if (event.key === 'Enter' && matches[0]) {
               event.preventDefault();
               pick(matches[0]);
@@ -86,13 +107,14 @@ export function CityPicker({ city, department, cityCode = '', disabled, onPick }
         />
       </label>
       {open && !disabled && (
-        <div className="city-picker-menu" role="listbox" aria-label="Municipios de Colombia">
+        <div className="city-picker-menu" role="listbox" aria-label={`Municipios de Colombia (${matches.length})`}>
+          <div className="city-picker-meta">{matches.length} de {ALL_CITIES.length} municipios</div>
           {!matches.length && <p className="city-picker-empty">Sin coincidencias</p>}
           {matches.map((item) => (
             <button
               key={item.code}
               type="button"
-              className="city-picker-option"
+              className={`city-picker-option${selected?.code === item.code ? ' active' : ''}`}
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => pick(item)}
             >
