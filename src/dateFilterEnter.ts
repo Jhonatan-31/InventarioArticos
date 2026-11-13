@@ -98,3 +98,24 @@ export function resolveMonthRange(monthValue: string): { from: string; to: strin
   const to = `${match[1]}-${match[2]}-${String(last).padStart(2, '0')}`;
   return { from, to };
 }
+
+const MONTH_LABELS = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+];
+
+/** Opciones tipo Chikas Plus: "Noviembre 2026". */
+export function listMonthOptions(count = 18): Array<{ value: string; label: string }> {
+  const options: Array<{ value: string; label: string }> = [];
+  const now = new Date();
+  now.setDate(1);
+  now.setHours(12, 0, 0, 0);
+  for (let i = 0; i < count; i += 1) {
+    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const value = `${year}-${String(month + 1).padStart(2, '0')}`;
+    options.push({ value, label: `${MONTH_LABELS[month]} ${year}` });
+  }
+  return options;
+}

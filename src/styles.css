@@ -580,7 +580,7 @@ a { color: var(--cognac-deep); }
   max-width: 340px;
 }
 .exel-filter-row > select,
-.exel-month-input {
+.exel-month-select {
   height: 40px;
   min-height: 40px;
   border: 1px solid #ddcfc0;
@@ -588,7 +588,12 @@ a { color: var(--cognac-deep); }
   background: #fff;
   padding: 0 10px;
   font-size: 13px;
-  min-width: 150px;
+  min-width: 160px;
+}
+.exel-month-select {
+  min-width: 180px;
+  font-weight: 650;
+  color: var(--ink);
 }
 .exel-filter-row .filter-ranges,
 .exel-filter-row .filter-dates {

@@ -10,6 +10,7 @@ import {
   DATE_RANGE_OPTIONS,
   type DateRangeKey,
   handleDateFilterEnterKey,
+  listMonthOptions,
   resolveDateRange,
   resolveMonthRange,
 } from '../dateFilterEnter';
@@ -370,6 +371,7 @@ export function Exel() {
 
   const channel = data?.sheetChannel[sheet];
   const shipStatuses = data?.shipStatuses || ['Enviado', 'Problema', 'Devolución', 'Entregado'];
+  const monthOptions = useMemo(() => listMonthOptions(24), []);
 
   return (
     <div className="stack page exel-page">
@@ -584,14 +586,18 @@ export function Exel() {
                 Filtrar
               </button>
             </div>
-            <input
-              type="month"
-              className="date-input exel-month-input"
+            <select
+              className="exel-month-select"
               value={monthPick}
               onChange={(event) => pickMonth(event.target.value)}
               aria-label="Elegir mes"
               title="Elegir mes completo"
-            />
+            >
+              <option value="">Elegir mes</option>
+              {monthOptions.map((item) => (
+                <option key={item.value} value={item.value}>{item.label}</option>
+              ))}
+            </select>
             <select
               value={advisorFilter}
               aria-label="Asesora"
