@@ -295,6 +295,15 @@ export function Exel() {
     scanRef.current?.focus();
   }
 
+  function clearBroughtData() {
+    setEditingId(null);
+    setForm(emptyForm());
+    setScanNote('');
+    setScanCode('');
+    setError('');
+    scanRef.current?.focus();
+  }
+
   async function handleScan(raw?: string) {
     const code = String(raw ?? scanCode).trim();
     if (!code) return;
@@ -489,6 +498,15 @@ export function Exel() {
               </select>
             </label>
           )}
+          <button
+            className="btn ghost"
+            type="button"
+            disabled={busy}
+            onClick={clearBroughtData}
+            title="Limpia persona, guía, precios y datos traídos"
+          >
+            Limpiar datos
+          </button>
         </form>
         {scanNote && <p className="scan-result ok compact-note"><span>{scanNote}</span></p>}
 
