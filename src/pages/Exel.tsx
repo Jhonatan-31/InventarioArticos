@@ -59,6 +59,7 @@ type FormState = {
   guideNumber: string;
   firstName: string;
   lastName: string;
+  phone: string;
   transport: string;
   advisor: string;
   shipStatus: ExcelShipStatus;
@@ -94,6 +95,7 @@ function emptyForm(): FormState {
     guideNumber: '',
     firstName: '',
     lastName: '',
+    phone: '',
     transport: '',
     advisor: '',
     shipStatus: 'Enviado',
@@ -353,7 +355,7 @@ export function Exel() {
       const refsText = orderRefLines(row)
         .map((item) => `${item.code} ${item.color} ${item.size} ${item.pairs}`)
         .join(' ');
-      return `${row.guideNumber} ${row.firstName} ${row.lastName} ${row.city} ${row.department} ${row.transport} ${row.advisor} ${row.qrCode || ''} ${row.shipStatus} ${refsText}`
+      return `${row.guideNumber} ${row.firstName} ${row.lastName} ${row.phone || ''} ${row.city} ${row.department} ${row.transport} ${row.advisor} ${row.qrCode || ''} ${row.shipStatus} ${refsText}`
         .toLowerCase()
         .includes(q);
     });
@@ -451,6 +453,7 @@ export function Exel() {
       guideNumber: order.guideNumber,
       firstName: order.firstName,
       lastName: order.lastName,
+      phone: order.phone || '',
       transport: normalizeTransport(order.transport),
       advisor: order.advisor,
       shipStatus: order.shipStatus,
@@ -523,6 +526,7 @@ export function Exel() {
           guideNumber: result.suggested.guideNumber || current.guideNumber,
           firstName: result.suggested.firstName || current.firstName,
           lastName: result.suggested.lastName || current.lastName,
+          phone: result.suggested.phone || result.person?.phone || current.phone,
           transport: normalizeTransport(result.suggested.transport) || current.transport,
           advisor: result.suggested.advisor || current.advisor,
           shipStatus: result.suggested.shipStatus,
@@ -579,6 +583,7 @@ export function Exel() {
         guideNumber: form.guideNumber,
         firstName: form.firstName,
         lastName: form.lastName,
+        phone: form.phone,
         transport: form.transport,
         advisor: form.advisor,
         shipStatus: form.shipStatus,
@@ -850,6 +855,15 @@ export function Exel() {
             <span>Apellidos</span>
             <input value={form.lastName} onChange={(event) => setForm({ ...form, lastName: event.target.value })} required />
           </label>
+          <label className="field">
+            <span>Celular</span>
+            <input
+              inputMode="tel"
+              value={form.phone}
+              onChange={(event) => setForm({ ...form, phone: event.target.value.replace(/[^\d+\s()-]/g, '').slice(0, 20) })}
+              placeholder="300 000 0000"
+            />
+          </label>
           <CityPicker
             city={form.city}
             department={form.department}
@@ -1046,6 +1060,7 @@ export function Exel() {
                 <th>Número de guía</th>
                 <th>Nombres</th>
                 <th>Apellidos</th>
+                <th>Celular</th>
                 <th>Referencias</th>
                 <th>Ciudad</th>
                 <th>Departamento</th>
@@ -1063,7 +1078,7 @@ export function Exel() {
             <tbody>
               {!filteredOrders.length && (
                 <tr>
-                  <td colSpan={16}>No hay filas con estos filtros en {sheet}.</td>
+                  <td colSpan={17}>No hay filas con estos filtros en {sheet}.</td>
                 </tr>
               )}
               {filteredOrders.map((order, index) => {
@@ -1081,6 +1096,7 @@ export function Exel() {
                   <td>{order.guideNumber || '—'}</td>
                   <td>{order.firstName}</td>
                   <td>{order.lastName}</td>
+                  <td className="exel-col-phone">{order.phone || '—'}</td>
                   <td className="exel-col-refs">
                     {!refs.length ? (
                       <span className="exel-refs-none">—</span>
@@ -1138,7 +1154,7 @@ export function Exel() {
             {!!filteredOrders.length && (
               <tfoot>
                 <tr>
-                  <td colSpan={14}>Total de ganancias (filtro actual)</td>
+                  <td colSpan={15}>Total de ganancias (filtro actual)</td>
                   <td className={`money ${filteredProfit < 0 ? 'exel-loss' : ''}`}>
                     <strong>{formatMoney(filteredProfit)}</strong>
                   </td>

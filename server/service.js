@@ -626,6 +626,7 @@ function mapExcelOrder(row) {
     guideNumber: row.guide_number || '',
     firstName: row.first_name || '',
     lastName: row.last_name || '',
+    phone: row.phone || '',
     transport: row.transport || '',
     advisor: row.advisor || '',
     shipStatus,
@@ -1221,7 +1222,7 @@ export const api = {
         id: personFromPair.personId || '',
         firstName: personFromPair.firstName,
         lastName: personFromPair.lastName,
-        phone: '',
+        phone: personFromPair.phone || '',
         transport: personFromPair.transport,
         advisor: personFromPair.advisor,
         updatedAt: personFromPair.updatedAt,
@@ -1235,6 +1236,7 @@ export const api = {
         guideNumber: personFromPair?.guideNumber || '',
         firstName: person?.firstName || '',
         lastName: person?.lastName || '',
+        phone: person?.phone || personFromPair?.phone || '',
         transport: person?.transport || '',
         advisor: person?.advisor || '',
         shipStatus: 'Enviado',
@@ -1265,6 +1267,7 @@ export const api = {
       fail(400, 'La transportadora debe ser Interrapidisimo, Coordinadora, Envia o TCC.');
     }
     const advisor = cleanOptional(input.advisor, 60);
+    const phone = cleanOptional(input.phone, 30);
     const city = cleanOptional(input.city, 80);
     const department = cleanOptional(input.department, 80);
     const refs = cleanExcelRefs(input.refs, null);
@@ -1286,17 +1289,17 @@ export const api = {
       pairId = refs[0].pairIds[0];
     }
     return transaction(() => {
-      const personId = upsertExcelPerson(firstName, lastName, transport, advisor, input.phone || '');
+      const personId = upsertExcelPerson(firstName, lastName, transport, advisor, phone);
       const id = crypto.randomUUID();
       const now = new Date().toISOString();
       db.prepare(`
         INSERT INTO excel_orders (
-          id, sheet, guide_number, first_name, last_name, transport, advisor, ship_status,
+          id, sheet, guide_number, first_name, last_name, phone, transport, advisor, ship_status,
           cost_price, sale_price, shipping_price, order_date, city, department, refs_json,
           pair_id, person_id, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
-        id, input.sheet, guideNumber, firstName, lastName, transport, advisor, input.shipStatus,
+        id, input.sheet, guideNumber, firstName, lastName, phone, transport, advisor, input.shipStatus,
         costPrice, salePrice, shippingPrice, orderDate, city, department, JSON.stringify(refs),
         pairId, personId, now, now,
       );
@@ -1328,6 +1331,7 @@ export const api = {
       fail(400, 'La transportadora debe ser Interrapidisimo, Coordinadora, Envia o TCC.');
     }
     const advisor = cleanOptional(input.advisor ?? current.advisor, 60);
+    const phone = cleanOptional(input.phone ?? current.phone, 30);
     const city = cleanOptional(input.city ?? current.city, 80);
     const department = cleanOptional(input.department ?? current.department, 80);
     // Solo reasigna códigos de bodega cuando el cliente envía referencias.
@@ -1346,16 +1350,16 @@ export const api = {
     const shippingPrice = cleanMoney(input.shippingPrice ?? current.shipping_price, 'El precio de envío');
     const orderDate = cleanOrderDate(input.orderDate ?? current.order_date);
     return transaction(() => {
-      const personId = upsertExcelPerson(firstName, lastName, transport, advisor, input.phone || '');
+      const personId = upsertExcelPerson(firstName, lastName, transport, advisor, phone);
       const now = new Date().toISOString();
       db.prepare(`
         UPDATE excel_orders
-        SET sheet = ?, guide_number = ?, first_name = ?, last_name = ?, transport = ?, advisor = ?,
+        SET sheet = ?, guide_number = ?, first_name = ?, last_name = ?, phone = ?, transport = ?, advisor = ?,
             ship_status = ?, cost_price = ?, sale_price = ?, shipping_price = ?, order_date = ?,
             city = ?, department = ?, refs_json = ?, person_id = ?, updated_at = ?
         WHERE id = ?
       `).run(
-        sheet, guideNumber, firstName, lastName, transport, advisor,
+        sheet, guideNumber, firstName, lastName, phone, transport, advisor,
         shipStatus, costPrice, salePrice, shippingPrice, orderDate,
         city, department, JSON.stringify(refs), personId, now, current.id,
       );

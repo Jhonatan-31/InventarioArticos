@@ -792,6 +792,11 @@ a { color: var(--cognac-deep); }
   min-width: 128px;
   color: var(--ink);
 }
+.exel-table .exel-col-phone {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  min-width: 118px;
+}
 .exel-table .exel-col-date {
   white-space: nowrap;
   font-weight: 650;

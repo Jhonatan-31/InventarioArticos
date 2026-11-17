@@ -154,6 +154,7 @@ try {
     guideNumber: 'G-100',
     firstName: 'Ana',
     lastName: 'Rojas',
+    phone: '3001234567',
     transport: 'Interrapidisimo',
     advisor: 'Laura',
     shipStatus: 'Enviado',
@@ -167,6 +168,7 @@ try {
   });
   assert(excel.summary.count === 1 && excel.summary.totalProfit === 50000, 'Exel calcula ganancia como venta - fabricación - envío');
   assert(excel.summary.orders[0].city === 'Medellín' && excel.summary.orders[0].department === 'Antioquia', 'Exel guarda ciudad y departamento');
+  assert(excel.summary.orders[0].phone === '3001234567', 'Exel guarda el celular del cliente');
   const withRefs = api.createExcelOrder({
     sheet: 'Articos',
     guideNumber: 'G-REF',
@@ -192,6 +194,7 @@ try {
   api.deleteExcelOrder(withRefs.summary.orders[0].id);
   const again = api.excelScan('00002', 'Dropi');
   assert(again.person?.firstName === 'Ana' && again.suggested.lastName === 'Rojas', 'el segundo escaneo trae los datos de la persona');
+  assert(again.person?.phone === '3001234567' || again.suggested.phone === '3001234567', 'el escaneo también trae el celular guardado');
   excel = api.updateExcelOrder(excel.summary.orders[0].id, { shipStatus: 'Entregado' });
   assert(excel.summary.orders[0].shipStatus === 'Entregado', 'se puede actualizar el estado de envío en Exel');
   excel = api.updateExcelOrder(excel.summary.orders[0].id, { shipStatus: 'Devolución' });

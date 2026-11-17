@@ -309,6 +309,7 @@ export function getDb() {
       guide_number TEXT NOT NULL DEFAULT '',
       first_name TEXT NOT NULL DEFAULT '',
       last_name TEXT NOT NULL DEFAULT '',
+      phone TEXT NOT NULL DEFAULT '',
       transport TEXT NOT NULL DEFAULT '',
       advisor TEXT NOT NULL DEFAULT '',
       ship_status TEXT NOT NULL CHECK (ship_status IN ('Enviado', 'Problema', 'Devolución', 'Entregado')),
@@ -332,6 +333,7 @@ export function getDb() {
   addColumn('excel_orders', 'city', `TEXT NOT NULL DEFAULT ''`);
   addColumn('excel_orders', 'department', `TEXT NOT NULL DEFAULT ''`);
   addColumn('excel_orders', 'refs_json', `TEXT NOT NULL DEFAULT '[]'`);
+  addColumn('excel_orders', 'phone', `TEXT NOT NULL DEFAULT ''`);
   database.exec(`
     UPDATE pairs
     SET size = (

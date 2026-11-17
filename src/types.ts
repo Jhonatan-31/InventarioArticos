@@ -216,6 +216,7 @@ export interface ExcelOrder {
   guideNumber: string;
   firstName: string;
   lastName: string;
+  phone: string;
   transport: string;
   advisor: string;
   shipStatus: ExcelShipStatus;
@@ -264,6 +265,7 @@ export interface ExcelScanResult {
     guideNumber: string;
     firstName: string;
     lastName: string;
+    phone: string;
     transport: string;
     advisor: string;
     shipStatus: ExcelShipStatus;
@@ -283,6 +285,7 @@ export interface ExcelOrderInput {
   guideNumber?: string;
   firstName: string;
   lastName: string;
+  phone?: string;
   transport?: string;
   advisor?: string;
   shipStatus: ExcelShipStatus;
@@ -294,8 +297,6 @@ export interface ExcelOrderInput {
   department?: string;
   refs?: Array<{ referenceId: string; pairs: number; size?: string; pairCodes?: string[] }>;
   excludeOrderId?: string | null;
-}
   pairId?: string | null;
   code?: string;
-  phone?: string;
 }
