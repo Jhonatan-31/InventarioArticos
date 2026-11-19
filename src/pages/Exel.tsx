@@ -8,6 +8,9 @@ import {
   getExcelData,
   updateExcelOrder,
 } from '../api';
+
+/** Temporal: Exel no anexa pares de bodega (sin existencia). Pon true junto al flag del servidor para reactivar. */
+const EXCEL_ALLOCATE_FROM_WAREHOUSE = false;
 import {
   DATE_RANGE_OPTIONS,
   type DateRangeKey,
@@ -279,6 +282,7 @@ export function Exel() {
   }, [form.refLines, references]);
 
   useEffect(() => {
+    if (!EXCEL_ALLOCATE_FROM_WAREHOUSE) return;
     const readyLines = form.refLines.filter((line) => line.referenceId && line.size && Number(line.pairs || 0) > 0);
     if (!readyLines.length) return;
     let cancel = false;
@@ -571,7 +575,7 @@ export function Exel() {
       setError('Elige la talla de cada referencia.');
       return;
     }
-    if (refsPayload.some((line) => !line.pairCodes.length)) {
+    if (EXCEL_ALLOCATE_FROM_WAREHOUSE && refsPayload.some((line) => !line.pairCodes.length)) {
       setError('Cada referencia debe tener códigos de bodega anexados a la persona.');
       return;
     }
@@ -810,28 +814,34 @@ export function Exel() {
                       Quitar
                     </button>
                   </div>
-                  <div className="exel-ref-codes">
-                    <span className="exel-ref-codes-label">Códigos anexados</span>
-                    {line.pairCodes.length ? (
-                      <div className="exel-ref-code-list">
-                        {line.pairCodes.map((code) => (
-                          <span className="exel-ref-code-pill" key={code}>{code}</span>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="muted">
-                        {line.referenceId && line.size
-                          ? (line.allocateNote || 'Buscando pares en bodega…')
-                          : 'Elige referencia y talla para anexar el código de bodega'}
-                      </span>
-                    )}
-                    {!!line.allocateNote && !!line.pairCodes.length && (
-                      <small className="exel-ref-codes-note">{line.allocateNote}</small>
-                    )}
-                    {!!line.allocateNote && !line.pairCodes.length && (
-                      <small className="exel-ref-codes-warn">{line.allocateNote}</small>
-                    )}
-                  </div>
+                  {EXCEL_ALLOCATE_FROM_WAREHOUSE ? (
+                    <div className="exel-ref-codes">
+                      <span className="exel-ref-codes-label">Códigos anexados</span>
+                      {line.pairCodes.length ? (
+                        <div className="exel-ref-code-list">
+                          {line.pairCodes.map((code) => (
+                            <span className="exel-ref-code-pill" key={code}>{code}</span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="muted">
+                          {line.referenceId && line.size
+                            ? (line.allocateNote || 'Buscando pares en bodega…')
+                            : 'Elige referencia y talla para anexar el código de bodega'}
+                        </span>
+                      )}
+                      {!!line.allocateNote && !!line.pairCodes.length && (
+                        <small className="exel-ref-codes-note">{line.allocateNote}</small>
+                      )}
+                      {!!line.allocateNote && !line.pairCodes.length && (
+                        <small className="exel-ref-codes-warn">{line.allocateNote}</small>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="exel-ref-codes">
+                      <span className="muted">Sin anexar códigos de bodega (desactivado por ahora).</span>
+                    </div>
+                  )}
                 </div>
               );
             })}

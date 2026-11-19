@@ -188,8 +188,9 @@ try {
     withRefs.summary.orders[0].costPrice === 160000
       && withRefs.summary.orders[0].refs.length === 1
       && withRefs.summary.orders[0].refs[0].size === '40'
-      && withRefs.summary.orders[0].refs[0].pairCodes.length === 2,
-    'Exel suma fabricación y anexa códigos de bodega a la persona',
+      && withRefs.summary.orders[0].refs[0].pairs === 2
+      && withRefs.summary.orders[0].refs[0].pairCodes.length === 0,
+    'Exel suma fabricación sin anexar códigos de bodega (anexión desactivada)',
   );
   api.deleteExcelOrder(withRefs.summary.orders[0].id);
   const again = api.excelScan('00002', 'Dropi');

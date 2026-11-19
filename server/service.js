@@ -456,6 +456,8 @@ const EXCEL_SHEETS = ['Dropi', 'Articos', 'Evalook', 'Luci Bot'];
 const EXCEL_SHIP_STATUSES = ['Enviado', 'Problema', 'Devolución', 'Entregado'];
 const EXCEL_TRANSPORTS = ['Interrapidisimo', 'Coordinadora', 'Envia', 'TCC'];
 const EXCEL_SHEET_CHANNEL = { Dropi: 'dropi', Articos: 'fabrica', Evalook: 'paginas', 'Luci Bot': 'paginas' };
+/** Temporal: Exel no exige ni anexa pares de bodega (sin existencia). Pon true para reactivar. */
+const EXCEL_ALLOCATE_FROM_WAREHOUSE = false;
 
 function isExcelSheet(value) {
   return EXCEL_SHEETS.includes(String(value || ''));
@@ -573,7 +575,7 @@ function allocateWarehouseCodes(referenceId, size, qty, keepCodes = [], excludeO
 function cleanExcelRefs(input, excludeOrderId = null) {
   const list = Array.isArray(input) ? input : parseExcelRefs(input);
   const cleaned = [];
-  const reserved = collectAnnexedCodes(excludeOrderId);
+  const reserved = EXCEL_ALLOCATE_FROM_WAREHOUSE ? collectAnnexedCodes(excludeOrderId) : null;
   for (const item of list) {
     const referenceId = String(item?.referenceId || item?.id || '').trim();
     if (!referenceId) continue;
@@ -584,9 +586,15 @@ function cleanExcelRefs(input, excludeOrderId = null) {
     const size = String(item?.size || '').trim();
     if (!size) fail(400, 'Elige la talla de cada referencia del pedido.');
     if (!SHOE_SIZES.includes(size)) fail(400, `La talla ${size} no está en la curva del 34 al 45.`);
-    const keepCodes = Array.isArray(item?.pairCodes) ? item.pairCodes : [];
-    const allocated = allocateWarehouseCodes(referenceId, size, pairs, keepCodes, excludeOrderId, reserved);
-    allocated.forEach((entry) => reserved.add(entry.qrCode));
+    let pairCodes = [];
+    let pairIds = [];
+    if (EXCEL_ALLOCATE_FROM_WAREHOUSE) {
+      const keepCodes = Array.isArray(item?.pairCodes) ? item.pairCodes : [];
+      const allocated = allocateWarehouseCodes(referenceId, size, pairs, keepCodes, excludeOrderId, reserved);
+      allocated.forEach((entry) => reserved.add(entry.qrCode));
+      pairCodes = allocated.map((entry) => entry.qrCode);
+      pairIds = allocated.map((entry) => entry.pairId);
+    }
     cleaned.push({
       referenceId: ref.id,
       code: ref.code,
@@ -595,8 +603,8 @@ function cleanExcelRefs(input, excludeOrderId = null) {
       size,
       price: Number(ref.price || 0),
       pairs,
-      pairCodes: allocated.map((entry) => entry.qrCode),
-      pairIds: allocated.map((entry) => entry.pairId),
+      pairCodes,
+      pairIds,
       lineTotal: Number(ref.price || 0) * pairs,
     });
   }
