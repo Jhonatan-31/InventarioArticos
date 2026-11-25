@@ -936,6 +936,20 @@ a { color: var(--cognac-deep); }
   -webkit-overflow-scrolling: touch;
 }
 .modal.wide { width: min(920px, 100%); }
+.modal.exel-edit-modal { width: min(1100px, 100%); }
+.exel-edit-hint { margin: 0; line-height: 1.45; }
+.exel-edit-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.exel-edit-modal-body .exel-entry-grid {
+  border-top: 0;
+  padding-top: 0;
+}
+.exel-edit-modal-body .city-picker-menu {
+  z-index: 45;
+}
 .modal-head { align-items: flex-start; margin-bottom: 12px; width: 100%; }
 .modal-head p { color: var(--muted); margin-top: 4px; line-height: 1.4; }
 .toasts {

@@ -6,12 +6,14 @@ export function Modal({
   onClose,
   children,
   wide,
+  className,
 }: {
   title: string;
   text?: string;
   onClose: () => void;
   children: React.ReactNode;
   wide?: boolean;
+  className?: string;
 }) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -24,7 +26,7 @@ export function Modal({
   return (
     <div className="modal-backdrop no-print" onMouseDown={onClose}>
       <div
-        className={wide ? 'modal wide' : 'modal'}
+        className={[wide ? 'modal wide' : 'modal', className].filter(Boolean).join(' ')}
         role="dialog"
         aria-modal="true"
         aria-label={title}

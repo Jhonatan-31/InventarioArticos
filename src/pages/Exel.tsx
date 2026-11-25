@@ -44,6 +44,7 @@ import { useUi } from '../ui';
 import { PageHeader } from '../components/PageHeader';
 import { StatusPill } from '../components/StatusPill';
 import { CityPicker } from '../components/CityPicker';
+import { Modal } from '../components/Modal';
 import { findColombiaCity } from '../data/colombia';
 
 const TRANSPORTS = ['Interrapidisimo', 'Coordinadora', 'Envia', 'TCC'] as const;
@@ -481,7 +482,6 @@ export function Exel() {
       refLines: refsToFormLines(order.refs),
     });
     setScanNote(order.qrCode ? `Editando pedido vinculado a ${order.qrCode}.` : 'Editando pedido.');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function resetForm() {
@@ -701,13 +701,24 @@ export function Exel() {
       {error && <p className="form-error">{error}</p>}
 
       <section className="panel exel-entry">
-        <header className="panel-head">
-          <h2>{editingId ? 'Editar fila' : 'Nueva fila'}</h2>
-          <div className="exel-entry-tags">
-            {form.linkedCode && <StatusPill status="salida" channel={channel} />}
-            {form.linkedCode && <span className="pill inventario">Par {form.linkedCode}</span>}
-          </div>
-        </header>
+        {editingId ? (
+          <>
+            <header className="panel-head">
+              <h2>Nueva fila</h2>
+            </header>
+            <p className="muted exel-edit-hint">
+              Estás editando un pedido en la ventana emergente. Guarda o cancela ahí para volver a agregar filas nuevas.
+            </p>
+          </>
+        ) : (
+          <>
+            <header className="panel-head">
+              <h2>Nueva fila</h2>
+              <div className="exel-entry-tags">
+                {form.linkedCode && <StatusPill status="salida" channel={channel} />}
+                {form.linkedCode && <span className="pill inventario">Par {form.linkedCode}</span>}
+              </div>
+            </header>
 
         <form
           className="exel-scan-row exel-scan-row-slim"
@@ -972,7 +983,291 @@ export function Exel() {
             )}
           </div>
         </form>
+          </>
+        )}
       </section>
+
+      {editingId && (
+        <Modal
+          title="Editar fila"
+          text={`Corrige los datos de ${form.firstName} ${form.lastName}.`}
+          wide
+          className="exel-edit-modal"
+          onClose={resetForm}
+        >
+          <div className="exel-edit-modal-body">
+            {error && <p className="form-error">{error}</p>}
+            <div className="exel-entry-tags">
+              {form.linkedCode && <StatusPill status="salida" channel={channel} />}
+              {form.linkedCode && <span className="pill inventario">Par {form.linkedCode}</span>}
+            </div>
+
+        <form
+          className="exel-scan-row exel-scan-row-slim"
+          onSubmit={(event) => { event.preventDefault(); void handleScan(); }}
+        >
+          <label className="field">
+            <span>Escanear par</span>
+            <input
+              ref={scanRef}
+              value={scanCode}
+              onChange={(event) => setScanCode(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key !== 'Enter') return;
+                event.preventDefault();
+                void handleScan(scanCode);
+              }}
+              placeholder="Pistola o código del par"
+              autoComplete="off"
+              disabled={busy}
+            />
+          </label>
+          <button className="btn primary" type="submit" disabled={busy}>Traer datos</button>
+          <button
+            className="btn ghost"
+            type="button"
+            disabled={busy}
+            onClick={clearBroughtData}
+            title="Limpia guía, referencias, precios y datos traídos"
+          >
+            Limpiar datos
+          </button>
+        </form>
+        {scanNote && <p className="scan-result ok compact-note"><span>{scanNote}</span></p>}
+
+        <div className="exel-refs-block">
+          <div className="exel-refs-head">
+            <div>
+              <h3>Referencias del pedido</h3>
+              <p>
+                Elige referencia, talla y pares. El sistema anexa automáticamente los códigos de bodega
+                a esta persona y quedan ligados a ella.
+              </p>
+            </div>
+            <button className="btn ghost" type="button" onClick={addRefLine} disabled={busy || !references.length}>
+              Agregar referencia
+            </button>
+          </div>
+          {!references.length && (
+            <p className="muted exel-refs-empty">Aún no hay referencias creadas en el catálogo.</p>
+          )}
+          <div className="exel-refs-list">
+            {form.refLines.map((line, index) => {
+              const ref = references.find((item) => item.id === line.referenceId);
+              const pairs = Math.max(0, Number(String(line.pairs || '').replace(/\D/g, '')) || 0);
+              const lineTotal = ref ? ref.price * pairs : 0;
+              return (
+                <div className="exel-ref-card" key={line.key}>
+                  <div className="exel-ref-row">
+                    <label className="field exel-ref-pick">
+                      <span>Referencia {index + 1}</span>
+                      <select
+                        value={line.referenceId}
+                        disabled={busy || !references.length}
+                        onChange={(event) => updateRefLine(line.key, { referenceId: event.target.value })}
+                      >
+                        <option value="">Elegir referencia guardada…</option>
+                        {references.map((item) => (
+                          <option key={item.id} value={item.id}>
+                            {item.code} · {item.color} · {formatMoney(item.price)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="field exel-ref-pairs">
+                      <span>Pares</span>
+                      <input
+                        inputMode="numeric"
+                        value={line.pairs}
+                        disabled={busy}
+                        onChange={(event) => updateRefLine(line.key, { pairs: event.target.value.replace(/\D/g, '') })}
+                        placeholder="1"
+                      />
+                    </label>
+                    <label className="field exel-ref-size">
+                      <span>Talla</span>
+                      <select
+                        value={line.size}
+                        disabled={busy}
+                        onChange={(event) => updateRefLine(line.key, { size: event.target.value })}
+                        required={!!line.referenceId}
+                      >
+                        <option value="">Elegir…</option>
+                        {SHOE_SIZES.map((size) => (
+                          <option key={size} value={size}>{size}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="field exel-ref-unit">
+                      <span>Precio ref.</span>
+                      <input value={ref ? formatMoney(ref.price) : '—'} readOnly />
+                    </label>
+                    <label className="field exel-ref-total">
+                      <span>Subtotal</span>
+                      <input value={ref ? formatMoney(lineTotal) : '—'} readOnly />
+                    </label>
+                    <button
+                      className="btn ghost exel-ref-remove"
+                      type="button"
+                      disabled={busy || form.refLines.length <= 1}
+                      onClick={() => removeRefLine(line.key)}
+                      title="Quitar referencia"
+                    >
+                      Quitar
+                    </button>
+                  </div>
+                  {EXCEL_ALLOCATE_FROM_WAREHOUSE ? (
+                    <div className="exel-ref-codes">
+                      <span className="exel-ref-codes-label">Códigos anexados</span>
+                      {line.pairCodes.length ? (
+                        <div className="exel-ref-code-list">
+                          {line.pairCodes.map((code) => (
+                            <span className="exel-ref-code-pill" key={code}>{code}</span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="muted">
+                          {line.referenceId && line.size
+                            ? (line.allocateNote || 'Buscando pares en bodega…')
+                            : 'Elige referencia y talla para anexar el código de bodega'}
+                        </span>
+                      )}
+                      {!!line.allocateNote && !!line.pairCodes.length && (
+                        <small className="exel-ref-codes-note">{line.allocateNote}</small>
+                      )}
+                      {!!line.allocateNote && !line.pairCodes.length && (
+                        <small className="exel-ref-codes-warn">{line.allocateNote}</small>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="exel-ref-codes">
+                      <span className="muted">Sin anexar códigos de bodega (desactivado por ahora).</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <div className="exel-refs-sum">
+            <span>Fabricación total</span>
+            <strong>{formatMoney(fabricationTotal)}</strong>
+          </div>
+        </div>
+
+        <form className="exel-entry-grid" onSubmit={submit}>
+          {sheet === 'Luci Bot' && (
+            <label className="field">
+              <span>ID</span>
+              <input
+                value={form.customId}
+                onChange={(event) => setForm({ ...form, customId: event.target.value.slice(0, 60) })}
+                placeholder="Escribe el ID"
+              />
+            </label>
+          )}
+          <label className="field">
+            <span>Número de guía</span>
+            <input value={form.guideNumber} onChange={(event) => setForm({ ...form, guideNumber: event.target.value })} placeholder="Guía o tracking" />
+          </label>
+          <label className="field">
+            <span>Nombres</span>
+            <input value={form.firstName} onChange={(event) => setForm({ ...form, firstName: event.target.value })} required />
+          </label>
+          <label className="field">
+            <span>Apellidos</span>
+            <input value={form.lastName} onChange={(event) => setForm({ ...form, lastName: event.target.value })} required />
+          </label>
+          <label className="field">
+            <span>Celular</span>
+            <input
+              inputMode="tel"
+              value={form.phone}
+              onChange={(event) => setForm({ ...form, phone: event.target.value.replace(/[^\d+\s()-]/g, '').slice(0, 20) })}
+              placeholder="300 000 0000"
+            />
+          </label>
+          <CityPicker
+            city={form.city}
+            department={form.department}
+            cityCode={form.cityCode}
+            disabled={busy}
+            onPick={(next) => setForm((current) => ({
+              ...current,
+              city: next.city,
+              department: next.department,
+              cityCode: next.code,
+            }))}
+          />
+          <label className="field">
+            <span>Departamento</span>
+            <input value={form.department} readOnly placeholder="Se completa al elegir ciudad" />
+          </label>
+          <label className="field">
+            <span>Transportadora</span>
+            <select
+              value={form.transport}
+              onChange={(event) => setForm({ ...form, transport: event.target.value as Transport | '' })}
+              required
+            >
+              <option value="">Seleccionar…</option>
+              {TRANSPORTS.map((item) => (
+                <option key={item} value={item}>{item}</option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span>Asesora</span>
+            <input value={form.advisor} onChange={(event) => setForm({ ...form, advisor: event.target.value })} />
+          </label>
+          <label className="field">
+            <span>Estado de envío</span>
+            <select value={form.shipStatus} onChange={(event) => setForm({ ...form, shipStatus: event.target.value as ExcelShipStatus })}>
+              {shipStatuses.map((status) => (
+                <option key={status} value={status}>{status}</option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span>Precio fabricación</span>
+            <input
+              inputMode="numeric"
+              value={form.refLines.some((line) => line.referenceId) ? String(fabricationTotal || '') : form.costPrice}
+              onChange={(event) => setForm({ ...form, costPrice: event.target.value.replace(/\D/g, '') })}
+              placeholder="0"
+              readOnly={form.refLines.some((line) => line.referenceId)}
+              title={form.refLines.some((line) => line.referenceId) ? 'Se calcula con las referencias y pares' : undefined}
+            />
+          </label>
+          <label className="field">
+            <span>Precio venta</span>
+            <input inputMode="numeric" value={form.salePrice} onChange={(event) => setForm({ ...form, salePrice: event.target.value.replace(/\D/g, '') })} placeholder="0" required />
+          </label>
+          <label className="field">
+            <span>Precio de envío</span>
+            <input inputMode="numeric" value={form.shippingPrice} onChange={(event) => setForm({ ...form, shippingPrice: event.target.value.replace(/\D/g, '') })} placeholder="0" />
+          </label>
+          <label className="field">
+            <span>Fecha</span>
+            <input type="date" value={form.orderDate} onChange={(event) => setForm({ ...form, orderDate: event.target.value })} required />
+          </label>
+          <label className="field">
+            <span>Ganancia</span>
+            <input value={formatMoney(profitPreview)} readOnly />
+          </label>
+          <div className="exel-entry-actions">
+            <button className="btn primary" type="submit" disabled={busy}>
+              {busy ? 'Guardando…' : editingId ? 'Guardar cambios' : 'Agregar a la hoja'}
+            </button>
+            {editingId && (
+              <button className="btn ghost" type="button" onClick={resetForm} disabled={busy}>
+                Cancelar
+              </button>
+            )}
+          </div>
+        </form>
+          </div>
+        </Modal>
+      )}
 
       <section className="panel exel-filters" aria-label="Filtros de la hoja">
         <header className="panel-head">
