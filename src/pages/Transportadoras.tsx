@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { lookupCarriers, refreshCarriers, searchCarrierCities } from '../api';
-import type { CarrierLookupResponse, CarrierCitySuggestion } from '../types';
+import type { CarrierLevel, CarrierLookupResponse, CarrierCitySuggestion } from '../types';
 import { PageHeader } from '../components/PageHeader';
 import { useUi } from '../ui';
 
@@ -15,6 +15,12 @@ function formatUpdatedAt(iso: string | null) {
   } catch {
     return iso;
   }
+}
+
+function levelTone(level: CarrierLevel) {
+  if (level === 'alto') return { short: 'Alto', meter: 100 };
+  if (level === 'medio') return { short: 'Medio', meter: 68 };
+  return { short: 'Bajo', meter: 42 };
 }
 
 export function Transportadoras() {
@@ -65,6 +71,12 @@ export function Transportadoras() {
     };
   }, [query, open]);
 
+  const levelCounts = useMemo(() => {
+    const counts = { alto: 0, medio: 0, bajo: 0 };
+    (result?.carriers || []).forEach((item) => { counts[item.level] += 1; });
+    return counts;
+  }, [result]);
+
   async function runLookup(city: string, refresh = false) {
     const name = city.trim();
     if (!name) return;
@@ -111,7 +123,7 @@ export function Transportadoras() {
       <PageHeader
         eyebrow="Cuentas"
         title="Transportadoras"
-        text="Busca el municipio y ve solo las transportadoras con envío, ordenadas por mejor probabilidad según el semáforo de Dropi."
+        text="Consulta el semáforo de entregas por municipio. Solo aparecen transportadoras con cobertura."
         actions={(
           <button
             type="button"
@@ -127,21 +139,27 @@ export function Transportadoras() {
       {warning && <p className="carriers-warning">{warning}</p>}
       {error && <p className="form-error">{error}</p>}
 
-      <section className="panel carriers-search-panel">
-        <header className="panel-head">
-          <h2>Municipio</h2>
-          {result?.updatedAt && (
-            <span>Datos: {formatUpdatedAt(result.updatedAt)}</span>
-          )}
-        </header>
+      <section className="carriers-hero">
+        <div className="carriers-hero-copy">
+          <p className="carriers-kicker">Semáforo Dropi</p>
+          <h2>¿A dónde envías?</h2>
+          <p>Escribe el municipio y elige en la lista. El resultado usa los mismos colores del Drive.</p>
+        </div>
+
+        <div className="carriers-legend" aria-label="Leyenda del semáforo">
+          <span className="carriers-legend-item tone-alto"><i /> Mejor · &gt;70%</span>
+          <span className="carriers-legend-item tone-medio"><i /> Medio · 65–69.9%</span>
+          <span className="carriers-legend-item tone-bajo"><i /> Por mejorar · &lt;65%</span>
+          <span className="carriers-legend-item tone-off"><i /> Sin envío · no se muestra</span>
+        </div>
 
         <div className="carriers-picker" ref={rootRef}>
-          <label className="field">
-            <span>Buscar municipio</span>
+          <label className="field carriers-search-field">
+            <span>Municipio</span>
             <input
               ref={inputRef}
               value={query}
-              placeholder="Escribe el municipio… ej. Bogotá, Medellín"
+              placeholder="Bogotá, Medellín, Cali…"
               autoComplete="off"
               onFocus={() => setOpen(true)}
               onChange={(event) => {
@@ -166,8 +184,8 @@ export function Transportadoras() {
             <div className="carriers-menu" role="listbox" aria-label="Municipios del semáforo">
               <div className="carriers-menu-meta">
                 {loadingSuggest
-                  ? 'Buscando…'
-                  : `${suggestions.length}${suggestTotal > suggestions.length ? ` de ${suggestTotal}` : ''} municipios`}
+                  ? 'Buscando municipios…'
+                  : `${suggestions.length}${suggestTotal > suggestions.length ? ` de ${suggestTotal}` : ''} coincidencias`}
               </div>
               {!loadingSuggest && !suggestions.length && (
                 <p className="carriers-menu-empty">Sin coincidencias en el semáforo</p>
@@ -181,48 +199,87 @@ export function Transportadoras() {
                   onClick={() => void runLookup(item.city)}
                 >
                   <strong>{item.city}</strong>
+                  <span>Consultar cobertura</span>
                 </button>
               ))}
             </div>
           )}
         </div>
+
+        {(result?.updatedAt || loadingLookup) && (
+          <p className="carriers-sync">
+            {loadingLookup
+              ? 'Consultando cobertura…'
+              : `Última lectura: ${formatUpdatedAt(result?.updatedAt || null)}`}
+          </p>
+        )}
       </section>
 
       {loadingLookup && (
-        <p className="muted carriers-loading">Consultando transportadoras…</p>
+        <div className="carriers-skeleton" aria-hidden="true">
+          <div className="carriers-skeleton-bar" />
+          <div className="carriers-skeleton-row" />
+          <div className="carriers-skeleton-row" />
+          <div className="carriers-skeleton-row" />
+        </div>
       )}
 
       {result && !loadingLookup && (
-        <section className="panel carriers-results">
-          <header className="panel-head">
-            <h2>{result.city}</h2>
-            <span>
-              {result.available
-                ? `${result.available} con envío`
-                : 'Sin cobertura'}
-            </span>
+        <section className="carriers-results" aria-live="polite">
+          <header className="carriers-results-head">
+            <div>
+              <p className="carriers-kicker">Resultado</p>
+              <h2>{result.city}</h2>
+            </div>
+            <div className="carriers-results-stats">
+              <strong>{result.available}</strong>
+              <span>{result.available === 1 ? 'transportadora' : 'transportadoras'} con envío</span>
+            </div>
           </header>
 
+          {!!result.carriers.length && (
+            <div className="carriers-breakdown" aria-label="Resumen por nivel">
+              <span className="tone-alto"><b>{levelCounts.alto}</b> alto</span>
+              <span className="tone-medio"><b>{levelCounts.medio}</b> medio</span>
+              <span className="tone-bajo"><b>{levelCounts.bajo}</b> bajo</span>
+            </div>
+          )}
+
           {!result.carriers.length ? (
-            <p className="carriers-empty">Sin envío disponible para ese municipio</p>
+            <div className="carriers-empty">
+              <strong>Sin cobertura</strong>
+              <p>Ninguna transportadora del semáforo tiene envío a este municipio.</p>
+            </div>
           ) : (
-            <ul className="carriers-list">
-              {result.carriers.map((carrier, index) => (
-                <li key={carrier.name} className={`carriers-row level-${carrier.level}`}>
-                  <div className="carriers-row-main">
-                    <span className="carriers-rank">{index + 1}</span>
-                    <div>
-                      <strong>{carrier.name}</strong>
-                      <p>{carrier.label}</p>
+            <ol className="carriers-list">
+              {result.carriers.map((carrier, index) => {
+                const tone = levelTone(carrier.level);
+                return (
+                  <li key={carrier.name} className={`carriers-row level-${carrier.level}`}>
+                    <div className="carriers-rail" aria-hidden="true" />
+                    <div className="carriers-row-body">
+                      <div className="carriers-row-main">
+                        <span className="carriers-rank">{index + 1}</span>
+                        <div className="carriers-row-copy">
+                          <strong>{carrier.name}</strong>
+                          <p>{carrier.label}</p>
+                        </div>
+                      </div>
+                      <div className="carriers-row-side">
+                        <div className={`carriers-badge level-${carrier.level}`}>
+                          <i />
+                          <span>{tone.short}</span>
+                        </div>
+                        <small>{carrier.range}</small>
+                        <div className="carriers-meter" aria-hidden="true">
+                          <span style={{ width: `${tone.meter}%` }} />
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="carriers-row-meta">
-                    <span className={`pill carrier-${carrier.level}`}>{carrier.level}</span>
-                    <small>{carrier.range}</small>
-                  </div>
-                </li>
-              ))}
-            </ul>
+                  </li>
+                );
+              })}
+            </ol>
           )}
         </section>
       )}
