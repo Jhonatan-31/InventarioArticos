@@ -181,11 +181,11 @@ export function Layout() {
             type="button"
             className="menu-btn"
             onClick={toggleSidebar}
-            aria-label={collapsed || !mobileOpen ? 'Abrir menú' : 'Cerrar menú'}
-            title={collapsed ? 'Abrir menú' : 'Cerrar o abrir menú'}
+            aria-label={collapsed ? 'Abrir menú' : 'Cerrar menú'}
+            title={collapsed ? 'Abrir menú' : 'Cerrar menú'}
           >
             <IconMenu />
-            <span>{collapsed ? 'Menú' : 'Menú'}</span>
+            <span>{collapsed ? 'Abrir' : 'Cerrar'}</span>
           </button>
           <p className="topbar-date">
             <span className="date-full">{todayFull}</span>

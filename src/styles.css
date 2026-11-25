@@ -41,36 +41,42 @@ a { color: var(--cognac-deep); }
 
 .shell {
   --sidebar-w: 196px;
-  display: grid;
-  grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+  --sidebar-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --sidebar-ms: 320ms;
+  display: block;
+  position: relative;
   height: 100vh;
   height: 100dvh;
   width: 100%;
   max-width: 100vw;
   overflow: hidden;
-  transition: grid-template-columns 0.22s ease;
-}
-.shell.sidebar-collapsed {
-  --sidebar-w: 0px;
 }
 .sidebar {
+  position: fixed;
+  z-index: 35;
+  left: 0;
+  top: 0;
+  width: var(--sidebar-w);
+  height: 100%;
+  height: 100dvh;
   background: #1c1612;
   color: #f6efe6;
   padding: calc(14px + var(--safe-top)) 10px calc(14px + var(--safe-bottom));
   display: flex;
   flex-direction: column;
   gap: 12px;
-  height: 100%;
   min-height: 0;
   min-width: 0;
-  width: 100%;
   overflow: hidden;
-  transition: opacity 0.18s ease, transform 0.22s ease;
+  transform: translateX(0);
+  transition: transform var(--sidebar-ms) var(--sidebar-ease);
+  will-change: transform;
+  box-shadow: 10px 0 28px rgba(0, 0, 0, 0.12);
 }
 .shell.sidebar-collapsed .sidebar {
-  opacity: 0;
+  transform: translateX(calc(-100% - 16px));
   pointer-events: none;
-  transform: translateX(-8px);
+  box-shadow: none;
 }
 .brand {
   display: flex;
@@ -145,7 +151,8 @@ a { color: var(--cognac-deep); }
 
 .main {
   min-width: 0;
-  width: 100%;
+  width: calc(100% - var(--sidebar-w));
+  margin-left: var(--sidebar-w);
   height: 100%;
   min-height: 0;
   display: flex;
@@ -154,6 +161,14 @@ a { color: var(--cognac-deep); }
   background:
     radial-gradient(circle at top right, rgba(141, 67, 40, 0.06), transparent 28%),
     var(--paper);
+  transition:
+    width var(--sidebar-ms) var(--sidebar-ease),
+    margin-left var(--sidebar-ms) var(--sidebar-ease);
+  will-change: width, margin-left;
+}
+.shell.sidebar-collapsed .main {
+  width: 100%;
+  margin-left: 0;
 }
 .topbar {
   display: flex;
@@ -189,8 +204,15 @@ a { color: var(--cognac-deep); }
 }
 .main-inner > .page,
 .main-inner > .stack {
-  max-width: 1480px;
-  margin: 0 auto;
+  max-width: none;
+  width: 100%;
+  margin: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .main {
+    transition: none !important;
+  }
 }
 .scrim { display: none; }
 .menu-btn {
@@ -1388,27 +1410,27 @@ button.ref-preview img {
 @media (max-width: 980px) {
   :root { --pad: 16px; }
   .shell,
-  .shell.sidebar-collapsed { grid-template-columns: 1fr; --sidebar-w: 0px; }
-  .shell.sidebar-collapsed .sidebar {
-    opacity: 1;
-    pointer-events: auto;
-    transform: translateX(calc(-100% - 8px));
+  .shell.sidebar-collapsed { --sidebar-w: 0px; }
+  .main,
+  .shell.sidebar-collapsed .main {
+    width: 100%;
+    margin-left: 0;
+    transition: none;
   }
   .sidebar {
-    position: fixed;
-    z-index: 35;
-    left: 0;
-    top: 0;
-    height: 100dvh;
-    transform: translateX(calc(-100% - 8px));
     width: min(260px, calc(100vw - 48px));
-    transition: transform 0.2s ease;
-    box-shadow: 0 0 0 transparent;
-    opacity: 1;
+    transform: translateX(calc(-100% - 12px));
+    pointer-events: auto;
+    box-shadow: none;
+  }
+  .shell.sidebar-collapsed .sidebar {
+    transform: translateX(calc(-100% - 12px));
     pointer-events: auto;
   }
-  .sidebar.open {
+  .sidebar.open,
+  .shell.sidebar-collapsed .sidebar.open {
     transform: none;
+    pointer-events: auto;
     box-shadow: 18px 0 40px rgba(0, 0, 0, 0.28);
   }
   .sidebar-collapse-btn { display: none; }
