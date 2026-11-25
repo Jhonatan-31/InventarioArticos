@@ -232,6 +232,7 @@ try {
     guideNumber: 'LB-1',
     firstName: 'Camila',
     lastName: 'Lopez',
+    customId: '',
     transport: 'Envia',
     advisor: 'Luci Bot',
     shipStatus: 'Enviado',
@@ -241,7 +242,10 @@ try {
     orderDate: '2026-11-12',
   });
   assert(luci.currentSheet === 'Luci Bot' && luci.summary.count === 1, 'existe la hoja Luci Bot para digitalizar');
-  api.deleteExcelOrder(luci.summary.orders[0].id);
+  assert(luci.summary.orders[0].customId === '', 'Luci Bot crea el ID vacío');
+  const luciUpdated = api.updateExcelOrder(luci.summary.orders[0].id, { customId: 'LB-9001' });
+  assert(luciUpdated.summary.orders[0].customId === 'LB-9001', 'Luci Bot permite poner el ID después');
+  api.deleteExcelOrder(luciUpdated.summary.orders[0].id);
 
   const saved = new DatabaseSync(file, { readOnly: true });
   const onDisk = Number(saved.prepare(`SELECT COUNT(*) AS n FROM pairs`).get().n);

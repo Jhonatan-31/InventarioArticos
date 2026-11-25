@@ -59,6 +59,7 @@ type RefLineForm = {
 };
 
 type FormState = {
+  customId: string;
   guideNumber: string;
   firstName: string;
   lastName: string;
@@ -78,6 +79,11 @@ type FormState = {
   refLines: RefLineForm[];
 };
 
+function displaySheetId(order: ExcelOrder) {
+  if (order.sheet === 'Luci Bot') return order.customId?.trim() || '—';
+  return order.qrCode || order.id.slice(0, 8);
+}
+
 function todayBogota() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(new Date());
 }
@@ -95,6 +101,7 @@ function newRefLine(referenceId = '', pairs = '1', size = '', pairCodes: string[
 
 function emptyForm(): FormState {
   return {
+    customId: '',
     guideNumber: '',
     firstName: '',
     lastName: '',
@@ -359,7 +366,7 @@ export function Exel() {
       const refsText = orderRefLines(row)
         .map((item) => `${item.code} ${item.color} ${item.size} ${item.pairs}`)
         .join(' ');
-      return `${row.guideNumber} ${row.firstName} ${row.lastName} ${row.phone || ''} ${row.city} ${row.department} ${row.transport} ${row.advisor} ${row.qrCode || ''} ${row.shipStatus} ${refsText}`
+      return `${row.guideNumber} ${row.firstName} ${row.lastName} ${row.phone || ''} ${row.customId || ''} ${row.city} ${row.department} ${row.transport} ${row.advisor} ${row.qrCode || ''} ${row.shipStatus} ${refsText}`
         .toLowerCase()
         .includes(q);
     });
@@ -454,6 +461,7 @@ export function Exel() {
       : null;
     setEditingId(order.id);
     setForm({
+      customId: order.customId || '',
       guideNumber: order.guideNumber,
       firstName: order.firstName,
       lastName: order.lastName,
@@ -584,6 +592,7 @@ export function Exel() {
     try {
       const payload = {
         sheet,
+        customId: sheet === 'Luci Bot' ? form.customId : '',
         guideNumber: form.guideNumber,
         firstName: form.firstName,
         lastName: form.lastName,
@@ -853,6 +862,16 @@ export function Exel() {
         </div>
 
         <form className="exel-entry-grid" onSubmit={submit}>
+          {sheet === 'Luci Bot' && (
+            <label className="field">
+              <span>ID</span>
+              <input
+                value={form.customId}
+                onChange={(event) => setForm({ ...form, customId: event.target.value.slice(0, 60) })}
+                placeholder="Escribe el ID"
+              />
+            </label>
+          )}
           <label className="field">
             <span>Número de guía</span>
             <input value={form.guideNumber} onChange={(event) => setForm({ ...form, guideNumber: event.target.value })} placeholder="Guía o tracking" />
@@ -1102,7 +1121,7 @@ export function Exel() {
                     order.shipStatus === 'Devolución' ? 'exel-return' : '',
                   ].filter(Boolean).join(' ') || undefined}
                 >
-                  <td>{order.qrCode || order.id.slice(0, 8)}</td>
+                  <td>{displaySheetId(order)}</td>
                   <td>{order.guideNumber || '—'}</td>
                   <td>{order.firstName}</td>
                   <td>{order.lastName}</td>

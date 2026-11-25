@@ -217,6 +217,7 @@ export interface ExcelOrder {
   firstName: string;
   lastName: string;
   phone: string;
+  customId: string;
   transport: string;
   advisor: string;
   shipStatus: ExcelShipStatus;
@@ -286,6 +287,7 @@ export interface ExcelOrderInput {
   firstName: string;
   lastName: string;
   phone?: string;
+  customId?: string;
   transport?: string;
   advisor?: string;
   shipStatus: ExcelShipStatus;

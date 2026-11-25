@@ -334,6 +334,7 @@ export function getDb() {
   addColumn('excel_orders', 'department', `TEXT NOT NULL DEFAULT ''`);
   addColumn('excel_orders', 'refs_json', `TEXT NOT NULL DEFAULT '[]'`);
   addColumn('excel_orders', 'phone', `TEXT NOT NULL DEFAULT ''`);
+  addColumn('excel_orders', 'custom_id', `TEXT NOT NULL DEFAULT ''`);
   database.exec(`
     UPDATE pairs
     SET size = (
