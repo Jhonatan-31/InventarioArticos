@@ -2,7 +2,19 @@ import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { getSession, logout } from '../api';
 import { useUi } from '../ui';
-import { IconAlert, IconBoxes, IconFile, IconPanel, IconPrint, IconScan, IconTag } from './Icons';
+import {
+  IconAlert,
+  IconBoxes,
+  IconFile,
+  IconMenu,
+  IconPanel,
+  IconPrint,
+  IconScan,
+  IconSidebar,
+  IconTag,
+} from './Icons';
+
+const SIDEBAR_KEY = 'evalook-sidebar-collapsed';
 
 const groups = [
   {
@@ -58,10 +70,19 @@ const names: Record<string, string> = {
   '/informes': 'Informes',
 };
 
+function readCollapsed() {
+  try {
+    return window.localStorage.getItem(SIDEBAR_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
 export function Layout() {
   const { nextQr, openDamage } = useUi();
   const location = useLocation();
-  const [open, setOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(readCollapsed);
   const [canLogout, setCanLogout] = useState(false);
   const todayFull = new Intl.DateTimeFormat('es-CO', {
     dateStyle: 'full',
@@ -74,7 +95,7 @@ export function Layout() {
     timeZone: 'America/Bogota',
   }).format(new Date());
 
-  useEffect(() => { setOpen(false); }, [location.pathname]);
+  useEffect(() => { setMobileOpen(false); }, [location.pathname]);
   useEffect(() => {
     document.title = `${names[location.pathname] || 'Inventario'} · Calzado Evalook`;
   }, [location.pathname]);
@@ -90,19 +111,45 @@ export function Layout() {
     return () => { alive = false; };
   }, []);
 
+  function toggleSidebar() {
+    const desktop = window.matchMedia('(min-width: 981px)').matches;
+    if (desktop) {
+      setCollapsed((current) => {
+        const next = !current;
+        try {
+          window.localStorage.setItem(SIDEBAR_KEY, next ? '1' : '0');
+        } catch {
+          /* ignore */
+        }
+        return next;
+      });
+      return;
+    }
+    setMobileOpen((current) => !current);
+  }
+
   return (
-    <div className="shell">
-      <aside className={open ? 'sidebar open' : 'sidebar'}>
+    <div className={collapsed ? 'shell sidebar-collapsed' : 'shell'}>
+      <aside className={mobileOpen ? 'sidebar open' : 'sidebar'}>
         <div className="brand">
           <span className="mark">EV</span>
-          <div>
+          <div className="brand-text">
             <strong>Evalook</strong>
             <small>Calzado</small>
           </div>
+          <button
+            type="button"
+            className="sidebar-collapse-btn"
+            onClick={toggleSidebar}
+            aria-label="Cerrar menú"
+            title="Cerrar menú"
+          >
+            <IconSidebar />
+          </button>
         </div>
         <nav>
           {groups.map((group) => (
-            <div key={group.label}>
+            <div key={group.label} className="nav-group">
               <p className="nav-label">{group.label}</p>
               {group.links.map((link) => (
                 <NavLink
@@ -110,9 +157,10 @@ export function Layout() {
                   to={link.to}
                   end={link.end}
                   className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+                  title={link.label}
                 >
                   {link.icon}
-                  {link.label}
+                  <span>{link.label}</span>
                 </NavLink>
               ))}
             </div>
@@ -121,14 +169,23 @@ export function Layout() {
         <div className="side-foot">
           <span>Siguiente código</span>
           <strong>{nextQr}</strong>
-          <small>Consecutivo único para todas las referencias</small>
+          <small>Consecutivo único</small>
         </div>
       </aside>
-      {open && <button type="button" className="scrim" aria-label="Cerrar menú" onClick={() => setOpen(false)} />}
+      {mobileOpen && (
+        <button type="button" className="scrim" aria-label="Cerrar menú" onClick={() => setMobileOpen(false)} />
+      )}
       <div className="main">
         <header className="topbar">
-          <button type="button" className="menu-btn" onClick={() => setOpen(true)} aria-label="Abrir menú">
-            Menú
+          <button
+            type="button"
+            className="menu-btn"
+            onClick={toggleSidebar}
+            aria-label={collapsed || !mobileOpen ? 'Abrir menú' : 'Cerrar menú'}
+            title={collapsed ? 'Abrir menú' : 'Cerrar o abrir menú'}
+          >
+            <IconMenu />
+            <span>{collapsed ? 'Menú' : 'Menú'}</span>
           </button>
           <p className="topbar-date">
             <span className="date-full">{todayFull}</span>

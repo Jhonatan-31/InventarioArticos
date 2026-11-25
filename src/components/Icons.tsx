@@ -33,3 +33,13 @@ export function IconFile() {
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l5 5v13H7zM14 3v5h5M9 13h6M9 17h6" /></svg>
   );
 }
+export function IconMenu() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+  );
+}
+export function IconSidebar() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM9 5v14" /></svg>
+  );
+}
