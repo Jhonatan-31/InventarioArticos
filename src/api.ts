@@ -1,5 +1,7 @@
 import type {
   AccountingData,
+  CarrierCitiesResponse,
+  CarrierLookupResponse,
   Channel,
   DashboardData,
   ExcelModuleData,
@@ -183,6 +185,24 @@ export function confirmLabels(pairIds: string[]) {
   return request<Pair[]>('/api/labels/confirm', {
     method: 'POST',
     body: JSON.stringify({ pairIds }),
+  });
+}
+
+export function searchCarrierCities(q: string, refresh = false, signal?: AbortSignal) {
+  const query = new URLSearchParams({ q });
+  if (refresh) query.set('refresh', '1');
+  return request<CarrierCitiesResponse>(`/api/carriers/cities?${query.toString()}`, { signal });
+}
+
+export function lookupCarriers(city: string, refresh = false, signal?: AbortSignal) {
+  const query = new URLSearchParams({ city });
+  if (refresh) query.set('refresh', '1');
+  return request<CarrierLookupResponse>(`/api/carriers/lookup?${query.toString()}`, { signal });
+}
+
+export function refreshCarriers() {
+  return request<{ ok: boolean; cities: number; updatedAt: string }>('/api/carriers/refresh', {
+    method: 'POST',
   });
 }
 

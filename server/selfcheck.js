@@ -247,6 +247,40 @@ try {
   assert(luciUpdated.summary.orders[0].customId === 'LB-9001', 'Luci Bot permite poner el ID después');
   api.deleteExcelOrder(luciUpdated.summary.orders[0].id);
 
+  const {
+    __setCarriersCacheForTests,
+    buildTestCarriersBuffer,
+    levelFromRate,
+    levelFromRgb,
+    parseCarriersBuffer,
+  } = await import('./carriers.js');
+
+  assert(levelFromRate(0.72) === 'alto', 'tasa >70% es alto');
+  assert(levelFromRate(0.677) === 'medio', 'tasa 65–69.9% es medio');
+  assert(levelFromRate(0.55) === 'bajo', 'tasa <65% es bajo');
+  assert(levelFromRate(0) === 'no', 'tasa 0 se oculta');
+  assert(levelFromRgb({ r: 176, g: 221, b: 127 }) === 'alto', 'verde RGB es alto');
+  assert(levelFromRgb({ r: 255, g: 217, b: 102 }) === 'medio', 'amarillo RGB es medio');
+  assert(levelFromRgb({ r: 255, g: 0, b: 0 }) === 'bajo', 'rojo RGB es bajo');
+  assert(levelFromRgb({ r: 180, g: 180, b: 180 }) === 'no', 'gris RGB se oculta');
+
+  const carriersBuf = await buildTestCarriersBuffer();
+  const parsedCarriers = await parseCarriersBuffer(carriersBuf);
+  __setCarriersCacheForTests({
+    at: Date.now(),
+    cities: parsedCarriers.cities,
+    cityNames: parsedCarriers.cityNames,
+    warning: null,
+  });
+  const bogota = parsedCarriers.cities.get('BOGOTA');
+  assert(Boolean(bogota), 'el buffer de prueba incluye Bogotá');
+  const envia = bogota.carriers.find((item) => item.name === 'Envía');
+  assert(envia?.level === 'medio', 'Bogotá trae Envía en nivel medio');
+  assert(!bogota.carriers.some((item) => item.name === 'Wilog'), 'Bogotá no lista Wilog si va en gris');
+  assert(!bogota.carriers.some((item) => item.name === 'De Rocha'), 'Bogotá no lista De Rocha si va en gris');
+  assert(bogota.carriers[0].level === 'alto', 'las transportadoras se ordenan alto → medio → bajo');
+  __setCarriersCacheForTests(null);
+
   const saved = new DatabaseSync(file, { readOnly: true });
   const onDisk = Number(saved.prepare(`SELECT COUNT(*) AS n FROM pairs`).get().n);
   const stockOnDisk = Number(saved.prepare(`SELECT COUNT(*) AS n FROM pairs WHERE status IN ('inventario', 'prioridad')`).get().n);

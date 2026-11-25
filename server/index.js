@@ -5,6 +5,7 @@ import express from 'express';
 import cors from 'cors';
 import { api } from './service.js';
 import { buildWorkbook } from './excel.js';
+import { lookupCarriers, refreshCarriers, searchCarrierCities } from './carriers.js';
 import { authGate, clearSessionCookie, login, sessionStatus, setSessionCookie } from './auth.js';
 import { dbFilePath, imagesDir } from './db.js';
 
@@ -119,6 +120,20 @@ app.post('/api/payments', (req, res) => {
   const body = req.body || {};
   res.status(201).json(api.addPayment(body.channel, body.amount, body.note));
 });
+
+app.get('/api/carriers/cities', asyncRoute(async (req, res) => {
+  const refresh = String(req.query.refresh || '') === '1';
+  res.json(await searchCarrierCities(String(req.query.q || ''), { refresh }));
+}));
+
+app.get('/api/carriers/lookup', asyncRoute(async (req, res) => {
+  const refresh = String(req.query.refresh || '') === '1';
+  res.json(await lookupCarriers(String(req.query.city || ''), { refresh }));
+}));
+
+app.post('/api/carriers/refresh', asyncRoute(async (_req, res) => {
+  res.json(await refreshCarriers());
+}));
 
 app.get('/api/excel', (req, res) => {
   res.json(api.excelData(req.query.sheet || 'Dropi'));

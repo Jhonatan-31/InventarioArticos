@@ -13,6 +13,7 @@ import { ReferenceDetail } from './pages/ReferenceDetail';
 import { References } from './pages/References';
 import { Reports } from './pages/Reports';
 import { Scanner } from './pages/Scanner';
+import { Transportadoras } from './pages/Transportadoras';
 import { UiProvider } from './ui';
 
 export function App() {
@@ -35,6 +36,7 @@ export function App() {
             <Route path="escaner" element={<Navigate to="/salida-paginas" replace />} />
             <Route path="contabilidad" element={<Contabilidad />} />
             <Route path="exel" element={<Exel />} />
+            <Route path="transportadoras" element={<Transportadoras />} />
             <Route path="etiquetas" element={<Labels />} />
             <Route path="novedades" element={<Incidents />} />
             <Route path="informes" element={<Reports />} />

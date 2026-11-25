@@ -747,6 +747,160 @@ a { color: var(--cognac-deep); }
   color: var(--muted);
   font-size: 13px;
 }
+
+.carriers-page { gap: 18px; }
+.carriers-warning {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f8efd8;
+  color: #7a4b12;
+  border: 1px solid #ead7a8;
+  font-size: 14px;
+}
+.carriers-search-panel { overflow: visible; }
+.carriers-picker { position: relative; max-width: 560px; }
+.carriers-menu {
+  position: absolute;
+  z-index: 28;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  max-height: 320px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+.carriers-menu-meta {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 8px 14px;
+  background: var(--cream);
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+.carriers-menu-empty {
+  margin: 0;
+  padding: 14px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.carriers-option {
+  width: 100%;
+  display: block;
+  border: 0;
+  border-bottom: 1px solid #f0e7dc;
+  background: transparent;
+  padding: 11px 14px;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+.carriers-option:last-child { border-bottom: 0; }
+.carriers-option:hover,
+.carriers-option.active { background: #fbf6f0; }
+.carriers-option strong {
+  font-size: 15px;
+  color: var(--ink);
+  font-weight: 600;
+}
+.carriers-option.active strong { color: var(--cognac-deep); }
+.carriers-loading { padding: 4px 2px; }
+.carriers-empty {
+  margin: 8px 0 4px;
+  padding: 28px 18px;
+  text-align: center;
+  color: var(--muted);
+  background: linear-gradient(180deg, #faf6f0, #f3ebe2);
+  border-radius: 14px;
+  border: 1px dashed #dfd0bf;
+  font-size: 15px;
+}
+.carriers-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.carriers-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(90deg, rgba(255, 253, 249, 0.96), rgba(255, 253, 249, 0.96)),
+    linear-gradient(90deg, var(--accent-soft, transparent), transparent 42%);
+  animation: carriers-in 320ms ease both;
+}
+.carriers-row.level-alto { --accent-soft: #e5f2ea; }
+.carriers-row.level-medio { --accent-soft: #f8efd8; }
+.carriers-row.level-bajo { --accent-soft: #f8e7e4; }
+.carriers-row:nth-child(2) { animation-delay: 40ms; }
+.carriers-row:nth-child(3) { animation-delay: 80ms; }
+.carriers-row:nth-child(4) { animation-delay: 120ms; }
+.carriers-row:nth-child(5) { animation-delay: 160ms; }
+.carriers-row-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+.carriers-rank {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: #1c1612;
+  color: #f6efe6;
+  font-size: 13px;
+  font-weight: 700;
+}
+.carriers-row-main strong {
+  display: block;
+  font-family: var(--serif);
+  font-size: 18px;
+  font-weight: 560;
+  letter-spacing: -0.02em;
+}
+.carriers-row-main p {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.carriers-row-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+.carriers-row-meta small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.pill.carrier-alto { color: var(--green); background: #e5f2ea; }
+.pill.carrier-medio { color: #7a4b12; background: #f8efd8; }
+.pill.carrier-bajo { color: var(--ox); background: #f8e7e4; }
+
+@keyframes carriers-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .exel-entry-grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -1486,6 +1640,11 @@ button.ref-preview img {
 
 @media (max-width: 640px) {
   :root { --pad: 14px; }
+  .carriers-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .carriers-row-meta { align-items: flex-start; }
   .kpi-grid,
   .dashboard-metrics { grid-template-columns: 1fr; }
   .today-grid { grid-template-columns: 1fr 1fr; }

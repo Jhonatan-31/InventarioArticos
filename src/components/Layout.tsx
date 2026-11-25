@@ -12,6 +12,7 @@ import {
   IconScan,
   IconSidebar,
   IconTag,
+  IconTruck,
 } from './Icons';
 
 const SIDEBAR_KEY = 'evalook-sidebar-collapsed';
@@ -41,6 +42,7 @@ const groups = [
     links: [
       { to: '/contabilidad', label: 'Contabilidad', icon: <IconFile />, end: false },
       { to: '/exel', label: 'Exel', icon: <IconFile />, end: false },
+      { to: '/transportadoras', label: 'Transportadoras', icon: <IconTruck />, end: false },
     ],
   },
   {
@@ -65,6 +67,7 @@ const names: Record<string, string> = {
   '/devolucion': 'Devolución',
   '/contabilidad': 'Contabilidad',
   '/exel': 'Exel',
+  '/transportadoras': 'Transportadoras',
   '/etiquetas': 'Etiquetas',
   '/novedades': 'Novedades',
   '/informes': 'Informes',

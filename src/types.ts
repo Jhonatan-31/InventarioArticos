@@ -302,3 +302,34 @@ export interface ExcelOrderInput {
   pairId?: string | null;
   code?: string;
 }
+
+export type CarrierLevel = 'alto' | 'medio' | 'bajo';
+
+export interface CarrierOption {
+  name: string;
+  level: CarrierLevel;
+  label: string;
+  range: string;
+}
+
+export interface CarrierCitySuggestion {
+  city: string;
+  key: string;
+}
+
+export interface CarrierCitiesResponse {
+  items: CarrierCitySuggestion[];
+  total: number;
+  stale: boolean;
+  warning: string | null;
+  updatedAt: string;
+}
+
+export interface CarrierLookupResponse {
+  city: string;
+  carriers: CarrierOption[];
+  available: number;
+  stale: boolean;
+  warning: string | null;
+  updatedAt: string;
+}
